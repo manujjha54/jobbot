@@ -3,32 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JobBot | Smarter resumes. Faster applications.</title>
+  <title>JobBot | Smarter resumes. Faster applications. Zero hassle.</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #090D16;
-      --card-bg: rgba(18, 26, 43, 0.75);
+      --bg: #0b0f19;
+      --card-bg: rgba(17, 24, 39, 0.75);
       --card-border: rgba(255, 255, 255, 0.08);
-      --primary: #6366F1;
-      --primary-gradient: linear-gradient(135deg, #6366F1 0%, #06B6D4 100%);
-      --accent: #06B6D4;
-      --text: #F8FAFC;
-      --text-muted: #94A3B8;
-      --input-bg: rgba(15, 23, 42, 0.6);
+      --primary: #6366f1;
+      --primary-gradient: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
+      --accent: #06b6d4;
+      --accent-glow: rgba(6, 182, 212, 0.15);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --input-bg: rgba(15, 23, 42, 0.65);
       --radius-lg: 20px;
-      --radius-sm: 10px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    
+
     body {
       background-color: var(--bg);
       background-image: 
-        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
-        radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.12) 0px, transparent 50%);
+        radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 40%);
       color: var(--text);
       font-family: 'Plus Jakarta Sans', sans-serif;
       min-height: 100vh;
@@ -36,88 +38,225 @@
       flex-direction: column;
     }
 
+    /* Header with Logo & Sub-tagline */
     header {
-      padding: 1.5rem 2.5rem;
+      padding: 1.75rem 2.5rem;
       display: flex;
-      justify-content: space-between;
       align-items: center;
       border-bottom: 1px solid var(--card-border);
+      background: rgba(11, 15, 25, 0.8);
       backdrop-filter: blur(12px);
     }
 
-    .logo-container {
+    .brand-group {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
       text-decoration: none;
-      color: var(--text);
     }
 
     .logo-badge {
-      width: 42px;
-      height: 42px;
+      width: 44px;
+      height: 44px;
       background: var(--primary-gradient);
       border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
       box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
+      flex-shrink: 0;
+    }
+
+    .logo-text-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
 
     .logo-title {
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 1.35rem;
+      font-size: 1.45rem;
       font-weight: 700;
+      color: var(--text);
       letter-spacing: -0.5px;
+      line-height: 1.1;
     }
 
-    .tagline-pill {
+    .logo-tagline {
       font-size: 0.82rem;
       color: var(--accent);
-      background: rgba(6, 182, 212, 0.1);
-      border: 1px solid rgba(6, 182, 212, 0.2);
-      padding: 4px 12px;
-      border-radius: 50px;
-      font-weight: 600;
+      font-weight: 500;
       letter-spacing: 0.2px;
     }
 
-    .container {
-      max-width: 1280px;
-      margin: 2rem auto;
-      padding: 0 1.5rem;
+    /* Main Content Layout */
+    .main-wrapper {
+      max-width: 1200px;
+      width: 100%;
+      margin: auto;
+      padding: 2.5rem 1.5rem;
       display: grid;
-      grid-template-columns: 1fr 1.2fr;
-      gap: 2.5rem;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 3rem;
       align-items: center;
-      flex: 1;
     }
 
-    @media (max-width: 960px) {
-      .container {
+    @media (max-width: 900px) {
+      .main-wrapper {
         grid-template-columns: 1fr;
+        gap: 2rem;
       }
     }
 
-    /* Login Box */
-    .auth-card {
+    /* Left: Integrated Product Showcase Deck */
+    .deck-section {
+      display: flex;
+      flex-direction: column;
+      gap: 1.75rem;
+    }
+
+    .deck-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: var(--accent-glow);
+      border: 1px solid rgba(6, 182, 212, 0.25);
+      border-radius: 50px;
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 600;
+      width: fit-content;
+    }
+
+    .deck-headline {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2.4rem;
+      font-weight: 700;
+      line-height: 1.2;
+      letter-spacing: -0.8px;
+    }
+
+    .deck-headline span {
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Native Interactive Deck Carousel */
+    .deck-slider-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      position: relative;
+      overflow: hidden;
+      min-height: 230px;
+    }
+
+    .deck-slide {
+      display: none;
+      animation: fadeIn 0.4s ease-in-out forwards;
+    }
+
+    .deck-slide.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .slide-step {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent);
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .slide-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      color: var(--text);
+    }
+
+    .slide-desc {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .deck-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--card-border);
+    }
+
+    .deck-dots {
+      display: flex;
+      gap: 8px;
+    }
+
+    .deck-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .deck-dot.active {
+      width: 24px;
+      border-radius: 4px;
+      background: var(--accent);
+    }
+
+    .deck-nav-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .deck-nav-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    /* Right: Login Card */
+    .login-card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: var(--radius-lg);
       padding: 2.5rem;
       backdrop-filter: blur(20px);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
     }
 
-    .auth-card h2 {
-      font-size: 1.75rem;
+    .login-card h2 {
+      font-size: 1.65rem;
       font-weight: 700;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.35rem;
+      letter-spacing: -0.4px;
     }
 
-    .auth-card p {
+    .login-card p {
       color: var(--text-muted);
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       margin-bottom: 1.75rem;
     }
 
@@ -129,7 +268,7 @@
       display: block;
       font-size: 0.85rem;
       font-weight: 600;
-      color: #CBD5E1;
+      color: #cbd5e1;
       margin-bottom: 6px;
     }
 
@@ -157,7 +296,7 @@
       border: none;
       border-radius: var(--radius-sm);
       color: white;
-      font-size: 1rem;
+      font-size: 0.98rem;
       font-weight: 700;
       cursor: pointer;
       box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
@@ -171,8 +310,8 @@
 
     .switch-link {
       text-align: center;
-      margin-top: 1.25rem;
-      font-size: 0.9rem;
+      margin-top: 1.35rem;
+      font-size: 0.88rem;
       color: var(--text-muted);
     }
 
@@ -182,94 +321,90 @@
       font-weight: 600;
     }
 
-    /* Presentation Showcase Frame */
-    .deck-preview-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius-lg);
-      padding: 1.5rem;
-      backdrop-filter: blur(20px);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .deck-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .deck-header span {
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
-
-    .deck-frame-container {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      border-radius: 12px;
-      overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      background: #000;
-    }
-
-    .deck-frame-container iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
-
-    .deck-actions {
-      display: flex;
-      justify-content: flex-end;
-    }
-
-    .deck-link-btn {
-      color: var(--accent);
-      text-decoration: none;
-      font-size: 0.9rem;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .deck-link-btn:hover {
-      text-decoration: underline;
+    .error-banner {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      margin-bottom: 1.25rem;
     }
   </style>
 </head>
 <body>
 
+  <!-- Top Header with Tagline directly below logo -->
   <header>
-    <a href="/" class="logo-container">
+    <div class="brand-group">
       <div class="logo-badge">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
           <circle cx="12" cy="12" r="3"/>
         </svg>
       </div>
-      <div>
+      <div class="logo-text-group">
         <div class="logo-title">JobBot</div>
+        <div class="logo-tagline">Smarter resumes. Faster applications. Zero hassle.</div>
       </div>
-    </a>
-    <div class="tagline-pill">Smarter resumes. Faster applications. Zero hassle.</div>
+    </div>
   </header>
 
-  <main class="container">
-    <!-- Login Form Section -->
-    <div class="auth-card">
+  <main class="main-wrapper">
+    <!-- Seamless Integrated Deck Section -->
+    <div class="deck-section">
+      <div class="deck-badge">✦ Automated Job Pipeline</div>
+      <h1 class="deck-headline">Transform how you apply with <span>intelligent automation</span>.</h1>
+
+      <div class="deck-slider-card">
+        <!-- Slide 1 -->
+        <div class="deck-slide active" data-slide="0">
+          <div class="slide-step">Phase 01 &bull; Profile Ingestion</div>
+          <div class="slide-title">Upload & Deep Parse</div>
+          <div class="slide-desc">Upload your resume once. JobBot extracts your core skills, experience depth, and domain focus into an ATS-optimized candidate profile.</div>
+        </div>
+
+        <!-- Slide 2 -->
+        <div class="deck-slide" data-slide="1">
+          <div class="slide-step">Phase 02 &bull; Match Engine</div>
+          <div class="slide-title">Local Pool Scoring</div>
+          <div class="slide-desc">The match engine compares open listings against your profile instantly, scoring relevance and surfacing high-probability roles.</div>
+        </div>
+
+        <!-- Slide 3 -->
+        <div class="deck-slide" data-slide="2">
+          <div class="slide-step">Phase 03 &bull; AI Tailoring</div>
+          <div class="slide-title">Targeted Cover Letters & Resumes</div>
+          <div class="slide-desc">Generate tailored cover letters and resume bullet adaptations targeted directly at keyword requirements for each role.</div>
+        </div>
+
+        <!-- Slide 4 -->
+        <div class="deck-slide" data-slide="3">
+          <div class="slide-step">Phase 04 &bull; Dispatch</div>
+          <div class="slide-title">Automated Application Tracking</div>
+          <div class="slide-desc">Dispatch your application and monitor deliverability, match scores, and status across all your applications in one view.</div>
+        </div>
+
+        <!-- Slide Navigation Controls -->
+        <div class="deck-controls">
+          <div class="deck-dots">
+            <div class="deck-dot active" onclick="showSlide(0)"></div>
+            <div class="deck-dot" onclick="showSlide(1)"></div>
+            <div class="deck-dot" onclick="showSlide(2)"></div>
+            <div class="deck-dot" onclick="showSlide(3)"></div>
+          </div>
+          <button class="deck-nav-btn" onclick="nextSlide()">Next Step →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Login Authentication Section -->
+    <div class="login-card">
       <h2>Welcome Back</h2>
-      <p>Log in to access your automated job matches & tailored applications.</p>
+      <p>Log in to access your tailored job stream & tracker.</p>
 
       {% if error %}
-        <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #FCA5A5; padding: 10px 14px; border-radius: 8px; font-size: 0.88rem; margin-bottom: 1.25rem;">
-          {{ error }}
-        </div>
+        <div class="error-banner">{{ error }}</div>
       {% endif %}
 
       <form method="POST" action="/auth/login">
@@ -290,18 +425,29 @@
         Don't have an account? <a href="/auth/signup">Create an account</a>
       </div>
     </div>
-
-    <!-- Embedded Presentation Deck -->
-    <div class="deck-preview-card">
-      <div class="deck-header">
-        <span>Product Overview & Process Deck</span>
-        <a href="/deck" target="_blank" class="deck-link-btn">Open Fullscreen ↗</a>
-      </div>
-      <div class="deck-frame-container">
-        <iframe src="/deck" title="JobBot Product Deck"></iframe>
-      </div>
-    </div>
   </main>
+
+  <script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.deck-slide');
+    const dots = document.querySelectorAll('.deck-dot');
+
+    function showSlide(index) {
+      slides[currentSlide].classList.remove('active');
+      dots[currentSlide].classList.remove('active');
+      currentSlide = index;
+      slides[currentSlide].classList.add('active');
+      dots[currentSlide].classList.add('active');
+    }
+
+    function nextSlide() {
+      const nextIndex = (currentSlide + 1) % slides.length;
+      showSlide(nextIndex);
+    }
+
+    // Auto-advance slides every 5 seconds
+    setInterval(nextSlide, 5000);
+  </script>
 
 </body>
 </html>
