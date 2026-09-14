@@ -1,0 +1,14 @@
+Dear Hiring Team at {company},
+
+I'm writing to express my interest in the {job_title} role. With {years_experience} years of client-facing experience in B2B SaaS customer success — including enterprise portfolio management, renewals, retention (NRR/GRR), and team leadership — I believe I'd bring immediate value to your customer success organization.
+
+In my current and recent roles, I've led high-impact Executive/Quarterly Business Reviews, driven double-digit improvements in onboarding time-to-value, and built health-scoring and escalation frameworks that materially improved retention. I'm equally comfortable managing a strategic account portfolio directly and coaching a team of CSMs to do the same.
+
+Relevant strengths include: {top_skills}.
+
+I'm based in {location} and fully aligned to North American working hours, with openness to relocation for the right opportunity. I'd welcome the chance to discuss how my background fits your team's goals.
+
+Thank you for your consideration. My resume is attached for further detail.
+
+Best regards,
+{candidate_name}

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log in — Job Search Console</title>
+<style>
+  :root { --navy: #1F3864; --navy-dark: #142748; --line: #E3E1DC; --muted: #6B6F76; --ink: #16233B; }
+  body { font-family: -apple-system, "Segoe UI", Inter, Roboto, sans-serif; background: #FAFAF8; color: var(--ink);
+         display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+  .card { background: white; border: 1px solid var(--line); border-radius: 12px; padding: 32px; width: 340px; }
+  h1 { font-size: 19px; margin: 0 0 6px; color: var(--navy); }
+  p.sub { font-size: 13px; color: var(--muted); margin: 0 0 22px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; }
+  input { width: 100%; box-sizing: border-box; padding: 9px 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; margin-bottom: 14px; }
+  button { width: 100%; background: var(--navy); color: white; border: none; padding: 11px; border-radius: 7px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  button:hover { background: var(--navy-dark); }
+  .error { color: #A63446; font-size: 13px; margin-bottom: 10px; display: none; }
+  .footer-link { text-align: center; font-size: 13px; margin-top: 16px; color: var(--muted); }
+  .footer-link a { color: var(--navy); font-weight: 600; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Job Search Console</h1>
+  <p class="sub">Log in to your account</p>
+  <div class="error" id="err"></div>
+  <label>Email<input type="email" id="email" autocomplete="email"></label>
+  <label>Password<input type="password" id="password" autocomplete="current-password"></label>
+  <button id="loginBtn">Log in</button>
+  <div class="footer-link">No account yet? <a href="/signup">Sign up</a></div>
+</div>
+<script>
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const err = document.getElementById('err');
+  err.style.display = 'none';
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email, password})
+    });
+    const data = await res.json();
+    if (data.error) {
+      err.textContent = data.error;
+      err.style.display = 'block';
+    } else {
+      window.location.href = data.is_admin ? '/' : '/';
+    }
+  } catch (e) {
+    err.textContent = 'Something went wrong. Try again.';
+    err.style.display = 'block';
+  }
+});
+document.getElementById('password').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('loginBtn').click();
+});
+</script>
+</body>
+</html>

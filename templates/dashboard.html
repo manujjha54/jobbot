@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Search Console</title>
+<style>
+  :root {
+    --ink: #16233B; --navy: #1F3864; --navy-dark: #142748; --paper: #FAFAF8; --panel: #FFFFFF;
+    --line: #E3E1DC; --muted: #6B6F76; --approve: #2E7D32; --approve-bg: #EEF7EE;
+    --reject: #A63446; --reject-bg: #FBEFF0; --skip-bg: #F2F1ED;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Inter, Roboto, sans-serif; background: var(--paper); color: var(--ink); line-height: 1.5; }
+  a { color: var(--navy); }
+  header { background: var(--navy); color: white; padding: 22px 32px 0; }
+  header .titlebar { display: flex; align-items: baseline; justify-content: space-between; max-width: 980px; margin: 0 auto; flex-wrap: wrap; gap: 8px; }
+  header h1 { font-size: 21px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+  header .subtitle { font-size: 13px; color: #C7D2E3; margin-top: 2px; }
+  header .userbar { font-size: 13px; color: #C7D2E3; }
+  header .userbar a { color: white; text-decoration: none; font-weight: 600; margin-left: 14px; }
+  nav.tabs { max-width: 980px; margin: 18px auto 0; display: flex; gap: 4px; }
+  nav.tabs button { background: none; border: none; color: #C7D2E3; padding: 10px 16px; font-size: 14px; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; }
+  nav.tabs button.active { color: white; border-bottom-color: white; }
+  main { max-width: 980px; margin: 0 auto; padding: 28px 32px 80px; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
+  .actionbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+  .actionbar .left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .status-pill { font-size: 12.5px; padding: 4px 10px; border-radius: 100px; font-weight: 600; }
+  .status-pill.ok { background: var(--approve-bg); color: var(--approve); }
+  .status-pill.bad { background: var(--reject-bg); color: var(--reject); }
+  .summary-line { font-size: 13.5px; color: var(--muted); }
+  button.primary { background: var(--navy); color: white; border: none; padding: 11px 20px; border-radius: 7px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  button.primary:hover { background: var(--navy-dark); }
+  button.primary:disabled { background: #A9B4C4; cursor: default; }
+  .job { border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin-bottom: 12px; background: var(--panel); }
+  .job.approved { border-color: var(--approve); background: var(--approve-bg); }
+  .job.rejected { opacity: 0.45; }
+  .job-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+  .job-title { font-size: 16px; font-weight: 650; }
+  .job-company { font-weight: 500; color: var(--muted); }
+  .match-badge { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 100px; background: #EEF1F8; color: var(--navy); white-space: nowrap; }
+  .job-meta { font-size: 13px; color: var(--muted); margin: 5px 0 10px; }
+  .job-desc { font-size: 13.5px; color: #3A3E45; margin-bottom: 10px; max-height: 42px; overflow: hidden; }
+  .job-bottom { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .job-link { font-size: 13px; font-weight: 600; }
+  .segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+  .segmented button { background: white; border: none; padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--muted); border-right: 1px solid var(--line); }
+  .segmented button:last-child { border-right: none; }
+  .segmented button.sel-approve.active { background: var(--approve-bg); color: var(--approve); }
+  .segmented button.sel-reject.active { background: var(--reject-bg); color: var(--reject); }
+  .segmented button.sel-skip.active { background: var(--skip-bg); color: var(--ink); }
+  .sticky-apply { position: sticky; bottom: 16px; margin-top: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 16px rgba(20,39,72,0.10); }
+  .empty { text-align: center; padding: 48px 20px; color: var(--muted); font-size: 14.5px; }
+  .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 22px; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .stat .num { font-size: 24px; font-weight: 700; color: var(--navy); }
+  .stat .label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  tr:last-child td { border-bottom: none; }
+  .badge { padding: 2px 8px; border-radius: 100px; font-size: 11.5px; font-weight: 700; }
+  .badge.sent { background: var(--approve-bg); color: var(--approve); }
+  .badge.draft { background: #FFF6E0; color: #92650A; }
+  .badge.manual { background: #EEF1F8; color: var(--navy); }
+  .badge.failed { background: var(--reject-bg); color: var(--reject); }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: white; padding: 12px 20px; border-radius: 8px; font-size: 13.5px; box-shadow: 0 6px 20px rgba(0,0,0,0.2); display: none; z-index: 100; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; margin-bottom: 14px; }
+  .form-grid label, .block-label { display: flex; flex-direction: column; font-size: 13px; font-weight: 600; color: var(--ink); gap: 5px; }
+  .block-label { margin-bottom: 14px; }
+  .block-label .hint { font-weight: 400; color: var(--muted); font-size: 12px; }
+  input[type="text"], input[type="number"], input[type="password"], input[type="email"], textarea {
+    font-family: inherit; font-size: 13.5px; font-weight: 400; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: white;
+  }
+  textarea { resize: vertical; }
+  input[type="file"] { font-size: 13.5px; }
+  .subpanel { background: #F7F8FA; margin: 6px 0 16px; }
+  .resume-card { border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin-bottom: 12px; background: var(--panel); }
+  .resume-top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+  .score-arrow { font-size: 13px; color: var(--muted); font-weight: 600; }
+  .score-arrow .before { color: var(--reject); }
+  .score-arrow .after { color: var(--approve); }
+  .keyword-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+  .chip { background: #EEF1F8; color: var(--navy); font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 100px; }
+  .resume-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+  @media (max-width: 640px) { header, main { padding-left: 18px; padding-right: 18px; } .stats-row { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="titlebar">
+    <div>
+      <h1>Job Search Console</h1>
+      <div class="subtitle" id="headerSubtitle">Upload a resume in Setup to get started</div>
+    </div>
+    <div class="userbar" id="userBar"></div>
+  </div>
+  <nav class="tabs">
+    <button class="tab-btn active" data-view="setup">Setup</button>
+    <button class="tab-btn" data-view="search">Search &amp; Review</button>
+    <button class="tab-btn" data-view="resumes">Tailored Resumes</button>
+    <button class="tab-btn" data-view="dashboard">Applications</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- SETUP -->
+  <div class="view active" id="view-setup">
+    <div class="panel" style="margin-bottom:16px;">
+      <h2 style="margin-top:0; font-size:16px;">1. Upload your resume</h2>
+      <p style="font-size:13.5px; color:var(--muted); margin-top:-6px;">.docx or .pdf. This becomes the resume used for matching, ATS scoring, and applications.</p>
+      <input type="file" id="resumeFile" accept=".docx,.pdf" style="margin-bottom:10px;">
+      <br>
+      <button class="primary" id="parseBtn">Parse resume</button>
+      <span id="parseStatus" style="font-size:13px; color:var(--muted); margin-left:10px;"></span>
+    </div>
+
+    <div class="panel" id="profileForm" style="display:none; margin-bottom:16px;">
+      <h2 style="margin-top:0; font-size:16px;">2. Review &amp; confirm your profile</h2>
+      <p style="font-size:13.5px; color:var(--muted); margin-top:-6px;">These were auto-suggested from your resume — edit anything that looks off before saving.</p>
+
+      <div class="form-grid">
+        <label>Full name<input type="text" id="f_name"></label>
+        <label>Phone<input type="text" id="f_phone"></label>
+        <label>LinkedIn URL<input type="text" id="f_linkedin"></label>
+        <label>Current location<input type="text" id="f_location"></label>
+        <label>Years of experience<input type="number" id="f_years" min="0"></label>
+      </div>
+
+      <label class="block-label">Target job titles <span class="hint">(comma-separated — this drives both search and what counts as a "relevant" match)</span>
+        <textarea id="f_titles" rows="2"></textarea>
+      </label>
+
+      <label class="block-label">Skills / keywords <span class="hint">(comma-separated — used for matching and ATS scoring)</span>
+        <textarea id="f_skills" rows="3"></textarea>
+      </label>
+
+      <label class="block-label">Nice-to-have skills <span class="hint">(optional, comma-separated)</span>
+        <textarea id="f_nice_skills" rows="2"></textarea>
+      </label>
+
+      <div class="form-grid">
+        <label>Acceptable locations <span class="hint">(comma-separated)</span>
+          <input type="text" id="f_locations" placeholder="Remote, India, Bengaluru">
+        </label>
+        <label style="align-self:end;">
+          <input type="checkbox" id="f_remote_first" style="width:auto; margin-right:6px;">
+          Prioritize remote roles
+        </label>
+      </div>
+
+      <label class="block-label">Minimum ATS score before auto-tailoring a resume
+        <input type="number" id="f_ats_min" value="90" min="0" max="100" style="width:100px;">
+        <span class="hint">Jobs scoring below this get a tailored resume automatically.</span>
+      </label>
+
+      <button class="primary" id="saveProfileBtn">Save profile &amp; continue</button>
+      <span id="saveStatus" style="font-size:13px; color:var(--muted); margin-left:10px;"></span>
+    </div>
+
+    <div class="panel subpanel">
+      <h2 style="margin-top:0; font-size:16px;">3. Email sending (optional)</h2>
+      <p style="font-size:12.5px; color:var(--muted); margin:0 0 10px;">
+        For postings that list a direct application email, the app can send on your behalf using a Gmail
+        <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">App Password</a>
+        (not your normal password). Your password is encrypted before storage. If you leave this off,
+        applications for those postings will just be marked ready with the draft saved for you to send yourself.
+      </p>
+      <div class="form-grid">
+        <label>Gmail address<input type="email" id="f_gmail_email" placeholder="you@gmail.com"></label>
+        <label>Gmail App Password<input type="password" id="f_gmail_password" placeholder="leave blank to keep existing"></label>
+      </div>
+      <label style="display:flex; align-items:center; font-size:13px; font-weight:600; gap:8px; margin-bottom:12px;">
+        <input type="checkbox" id="f_send_enabled" style="width:auto;">
+        Send emails automatically for approved applications
+      </label>
+      <button class="primary" id="saveGmailBtn">Save email settings</button>
+      <span id="gmailStatus" style="font-size:13px; color:var(--muted); margin-left:10px;"></span>
+    </div>
+  </div>
+
+  <!-- SEARCH & REVIEW -->
+  <div class="view" id="view-search">
+    <div class="actionbar">
+      <div class="left">
+        <button class="primary" id="searchBtn">Search for new jobs</button>
+        <span class="summary-line" id="searchSummary"></span>
+      </div>
+      <div class="left" id="statusPills"></div>
+    </div>
+    <div id="jobList"></div>
+    <div class="empty" id="emptyState" style="display:none;">No jobs waiting for review yet. Click "Search for new jobs" to start.</div>
+    <div class="sticky-apply" id="applyBar" style="display:none;">
+      <span id="approvedCount" style="font-size:13.5px; color:var(--muted);"></span>
+      <button class="primary" id="applyBtn">Apply to approved jobs</button>
+    </div>
+  </div>
+
+  <!-- TAILORED RESUMES -->
+  <div class="view" id="view-resumes">
+    <p style="font-size:13.5px; color:var(--muted); margin-top:0;">
+      Every resume the app automatically tailored below your ATS threshold, with the specific keywords it added.
+      Spot check these before assuming they're perfect — if a keyword doesn't reflect real experience, download,
+      edit, and re-upload manually for that application instead.
+    </p>
+    <div id="resumeList"></div>
+    <div class="empty" id="resumeEmpty" style="display:none;">No tailored resumes yet — these appear here once you apply to a job that scored below your ATS threshold.</div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="view" id="view-dashboard">
+    <div class="stats-row" id="statsRow"></div>
+    <div class="panel">
+      <table id="appTable">
+        <thead><tr><th>Applied</th><th>Role</th><th>Company</th><th>Method</th><th>Status</th><th>ATS</th><th>Link</th><th>Resume</th></tr></thead>
+        <tbody id="appTableBody"></tbody>
+      </table>
+      <div class="empty" id="dashEmpty" style="display:none;">No applications yet — approve and apply to some jobs first.</div>
+    </div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+
+function showToast(msg, isError) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.style.background = isError ? '#A63446' : '#16233B';
+  t.style.display = 'block';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.style.display = 'none', 4500);
+}
+
+function switchTab(view) {
+  $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  $$('.view').forEach(v => v.classList.remove('active'));
+  $('#view-' + view).classList.add('active');
+  if (view === 'dashboard') loadDashboard();
+  if (view === 'resumes') loadTailoredResumes();
+}
+$$('.tab-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.view)));
+
+// --- User bar / logout ---
+async function loadMe() {
+  const res = await fetch('/api/me');
+  const me = await res.json();
+  if (!me.logged_in) { window.location.href = '/login'; return; }
+  const bar = $('#userBar');
+  bar.innerHTML = escapeHtml(me.email) + (me.is_admin ? ' <a href="/admin">Admin</a>' : '') + ' <a href="#" id="logoutLink">Log out</a>';
+  $('#logoutLink').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await fetch('/api/logout', { method: 'POST' });
+    window.location.href = '/login';
+  });
+}
+
+// --- Status ---
+let initialLoadDone = false;
+async function loadStatus() {
+  try {
+    const res = await fetch('/api/status');
+    const s = await res.json();
+    const pills = $('#statusPills');
+    pills.innerHTML = '';
+    pills.appendChild(pillEl('Resume', s.resume_exists));
+    pills.appendChild(pillEl('Email sending', s.gmail_configured && s.send_emails_enabled));
+
+    const subtitle = $('#headerSubtitle');
+    subtitle.textContent = s.setup_complete
+      ? (s.profile_name ? s.profile_name + ' — ' : '') + (s.target_titles || []).slice(0, 3).join(' · ')
+      : 'Upload a resume in Setup to get started';
+
+    if (!initialLoadDone) {
+      initialLoadDone = true;
+      if (s.setup_complete) switchTab('search');
+    }
+  } catch (e) {}
+}
+function pillEl(label, ok) {
+  const span = document.createElement('span');
+  span.className = 'status-pill ' + (ok ? 'ok' : 'bad');
+  span.textContent = label + (ok ? ' ✓' : ' off');
+  return span;
+}
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+
+// --- Setup: parse + save profile ---
+let pendingResumeFilename = null;
+let pendingResumeToken = null;
+
+$('#parseBtn').addEventListener('click', async () => {
+  const fileInput = $('#resumeFile');
+  if (!fileInput.files.length) { showToast('Choose a .docx or .pdf resume first.', true); return; }
+  const btn = $('#parseBtn');
+  btn.disabled = true; btn.textContent = 'Parsing…';
+  const formData = new FormData();
+  formData.append('resume', fileInput.files[0]);
+  try {
+    const res = await fetch('/api/parse_resume', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.error) { showToast(data.error, true); }
+    else {
+      pendingResumeFilename = data.resume_filename;
+      pendingResumeToken = data.resume_token;
+      $('#f_titles').value = (data.suggested_titles || []).join(', ');
+      $('#f_skills').value = (data.suggested_skills || []).join(', ');
+      $('#f_years').value = data.suggested_years_experience || '';
+      $('#profileForm').style.display = 'block';
+      $('#parseStatus').textContent = 'Parsed — review the fields below.';
+      $('#profileForm').scrollIntoView({ behavior: 'smooth' });
+    }
+  } catch (e) { showToast('Could not parse that resume.', true); }
+  btn.disabled = false; btn.textContent = 'Parse resume';
+});
+
+function splitCommaList(str) { return (str || '').split(',').map(s => s.trim()).filter(Boolean); }
+
+$('#saveProfileBtn').addEventListener('click', async () => {
+  const titles = splitCommaList($('#f_titles').value);
+  if (!titles.length) { showToast('Add at least one target job title.', true); return; }
+  const body = {
+    resume_token: pendingResumeToken,
+    name: $('#f_name').value.trim(), phone: $('#f_phone').value.trim(),
+    linkedin: $('#f_linkedin').value.trim(), location: $('#f_location').value.trim(),
+    years_experience: parseInt($('#f_years').value) || 0, target_titles: titles,
+    must_have_skills: splitCommaList($('#f_skills').value),
+    nice_to_have_skills: splitCommaList($('#f_nice_skills').value),
+    remote_first: $('#f_remote_first').checked,
+    acceptable_locations: splitCommaList($('#f_locations').value),
+    ats_min_score: parseInt($('#f_ats_min').value) || 90,
+  };
+  const btn = $('#saveProfileBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const res = await fetch('/api/save_profile', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (data.error) { showToast(data.error, true); }
+    else { showToast('Profile saved!'); loadStatus(); switchTab('search'); }
+  } catch (e) { showToast('Could not save profile.', true); }
+  btn.disabled = false; btn.textContent = 'Save profile & continue';
+});
+
+$('#saveGmailBtn').addEventListener('click', async () => {
+  const body = {
+    gmail_email: $('#f_gmail_email').value.trim(),
+    gmail_app_password: $('#f_gmail_password').value.trim(),
+    send_emails_enabled: $('#f_send_enabled').checked,
+  };
+  try {
+    const res = await fetch('/api/save_gmail_settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (data.error) { showToast(data.error, true); }
+    else { showToast('Email settings saved.'); $('#f_gmail_password').value = ''; loadStatus(); }
+  } catch (e) { showToast('Could not save email settings.', true); }
+});
+
+// --- Job list ---
+let currentJobs = [];
+function renderJobs(jobs) {
+  currentJobs = jobs;
+  const list = $('#jobList');
+  list.innerHTML = '';
+  $('#emptyState').style.display = jobs.length ? 'none' : 'block';
+
+  jobs.forEach(job => {
+    const div = document.createElement('div');
+    const decision = job.decision || 'skip';
+    div.className = 'job' + (decision === 'approve' ? ' approved' : decision === 'reject' ? ' rejected' : '');
+    const scorePct = Math.round((job.match_score || 0) * 100);
+    const desc = (job.description || '').replace(/\s+/g, ' ').slice(0, 220);
+    div.innerHTML = `
+      <div class="job-top">
+        <div><span class="job-title">${escapeHtml(job.title)}</span><span class="job-company"> — ${escapeHtml(job.company)}</span></div>
+        <span class="match-badge">${scorePct}% match</span>
+      </div>
+      <div class="job-meta">${escapeHtml(job.location || '')} ${job.remote ? '· Remote' : ''} · source: ${escapeHtml(job.source || '')}</div>
+      <div class="job-desc">${escapeHtml(desc)}${desc.length === 220 ? '…' : ''}</div>
+      <div class="job-bottom">
+        <a class="job-link" href="${job.url}" target="_blank" rel="noopener">View posting</a>
+        <div class="segmented">
+          <button class="sel-approve ${decision === 'approve' ? 'active' : ''}" data-decision="approve">Approve</button>
+          <button class="sel-reject ${decision === 'reject' ? 'active' : ''}" data-decision="reject">Reject</button>
+          <button class="sel-skip ${decision === 'skip' ? 'active' : ''}" data-decision="skip">Skip</button>
+        </div>
+      </div>`;
+    div.querySelectorAll('.segmented button').forEach(btn => {
+      btn.addEventListener('click', () => decide(job.job_posting_id, btn.dataset.decision, div, job));
+    });
+    list.appendChild(div);
+  });
+  updateApplyBar();
+}
+
+function updateApplyBar() {
+  const approved = currentJobs.filter(j => j.decision === 'approve');
+  const bar = $('#applyBar');
+  if (approved.length > 0) {
+    bar.style.display = 'flex';
+    $('#approvedCount').textContent = `${approved.length} job${approved.length === 1 ? '' : 's'} approved and ready to apply`;
+  } else { bar.style.display = 'none'; }
+}
+
+async function decide(jobPostingId, decision, cardEl, job) {
+  job.decision = decision;
+  cardEl.classList.remove('approved', 'rejected');
+  if (decision === 'approve') cardEl.classList.add('approved');
+  if (decision === 'reject') cardEl.classList.add('rejected');
+  cardEl.querySelectorAll('.segmented button').forEach(b => b.classList.toggle('active', b.dataset.decision === decision));
+  updateApplyBar();
+  try {
+    await fetch('/api/decide', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ job_posting_id: jobPostingId, decision }) });
+  } catch (e) { showToast('Could not save decision.', true); }
+}
+
+$('#searchBtn').addEventListener('click', async () => {
+  const btn = $('#searchBtn');
+  btn.disabled = true; btn.textContent = 'Searching…';
+  try {
+    const res = await fetch('/api/search', { method: 'POST' });
+    const data = await res.json();
+    if (data.error) { showToast('Search failed: ' + data.error, true); }
+    else {
+      $('#searchSummary').textContent = `${data.considered} postings considered · ${data.matched} matched this run`;
+      renderJobs(data.jobs);
+      showToast(`Found ${data.matched} new match(es).`);
+    }
+  } catch (e) { showToast('Search failed.', true); }
+  btn.disabled = false; btn.textContent = 'Search for new jobs';
+});
+
+$('#applyBtn').addEventListener('click', async () => {
+  const btn = $('#applyBtn');
+  btn.disabled = true; btn.textContent = 'Applying…';
+  try {
+    const res = await fetch('/api/apply', { method: 'POST' });
+    const data = await res.json();
+    if (data.error) { showToast('Apply failed: ' + data.error, true); }
+    else {
+      const n = data.results.length;
+      showToast(n ? `Processed ${n} application(s). See the Applications tab.` : (data.message || 'Nothing to apply.'));
+      await loadJobs();
+    }
+  } catch (e) { showToast('Apply failed.', true); }
+  btn.disabled = false; btn.textContent = 'Apply to approved jobs';
+});
+
+async function loadJobs() {
+  try {
+    const res = await fetch('/api/jobs');
+    const data = await res.json();
+    renderJobs(data.jobs || []);
+  } catch (e) {}
+}
+
+// --- Tailored Resumes ---
+async function loadTailoredResumes() {
+  try {
+    const res = await fetch('/api/tailored_resumes');
+    const data = await res.json();
+    const list = $('#resumeList');
+    list.innerHTML = '';
+    $('#resumeEmpty').style.display = data.resumes.length ? 'none' : 'block';
+
+    data.resumes.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'resume-card';
+      const chips = (r.added_keywords || []).map(k => `<span class="chip">${escapeHtml(k)}</span>`).join('');
+      div.innerHTML = `
+        <div class="resume-top">
+          <div>
+            <span class="job-title">${escapeHtml(r.title)}</span>
+            <span class="job-company"> — ${escapeHtml(r.company)}</span>
+          </div>
+          <span class="score-arrow"><span class="before">${r.base_ats_score}%</span> → <span class="after">${r.ats_score}%</span></span>
+        </div>
+        <div class="keyword-chips">${chips || '<span style="color:var(--muted); font-size:12.5px;">No keywords recorded</span>'}</div>
+        <div class="resume-bottom">
+          <a class="job-link" href="${r.url}" target="_blank" rel="noopener">View posting</a>
+          <a href="/api/download_resume/${r.id}"><button class="primary" style="padding:8px 14px; font-size:13px;">Download tailored resume</button></a>
+        </div>`;
+      list.appendChild(div);
+    });
+  } catch (e) { showToast('Could not load tailored resumes.', true); }
+}
+
+// --- Dashboard ---
+function resumeDownloadCell(row) {
+  if (!row.was_tailored) return '<span style="color:var(--muted); font-size:12.5px;">Base resume</span>';
+  return `<a href="/api/download_resume/${row.id}">Download tailored</a>`;
+}
+
+async function loadDashboard() {
+  try {
+    const res = await fetch('/api/dashboard');
+    const data = await res.json();
+    const s = data.summary;
+    const stats = [
+      ['Total applications', s.total], ['Emails sent', s.sent],
+      ['Ready to apply manually', s.manual_pending],
+      ['Tailored resumes', s.tailored_count],
+      ['Avg. ATS score', s.avg_ats_score !== null ? s.avg_ats_score + '%' : '—'],
+    ];
+    $('#statsRow').innerHTML = stats.map(([label, num]) => `<div class="stat"><div class="num">${num}</div><div class="label">${label}</div></div>`).join('');
+
+    const tbody = $('#appTableBody');
+    tbody.innerHTML = '';
+    if (!data.rows.length) { $('#dashEmpty').style.display = 'block'; }
+    else {
+      $('#dashEmpty').style.display = 'none';
+      data.rows.forEach(r => {
+        const tr = document.createElement('tr');
+        let badgeClass = 'manual', badgeText = 'Apply manually';
+        if (r.apply_method === 'email') { badgeClass = 'sent'; badgeText = 'Sent'; }
+        else if (r.apply_method === 'email_draft') { badgeClass = 'draft'; badgeText = 'Draft saved'; }
+        else if (r.apply_method === 'email_failed') { badgeClass = 'failed'; badgeText = 'Send failed'; }
+        tr.innerHTML = `
+          <td>${escapeHtml((r.applied_at || '').slice(0,10))}</td>
+          <td>${escapeHtml(r.title)}</td>
+          <td>${escapeHtml(r.company)}</td>
+          <td>${escapeHtml(r.apply_method)}</td>
+          <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+          <td>${r.ats_score ? r.ats_score + '%' : '—'}</td>
+          <td>${r.url ? `<a href="${r.url}" target="_blank" rel="noopener">Open</a>` : '—'}</td>
+          <td>${resumeDownloadCell(r)}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+  } catch (e) { showToast('Could not load dashboard.', true); }
+}
+
+// --- Init ---
+loadMe();
+loadStatus();
+loadJobs();
+</script>
+</body>
+</html>

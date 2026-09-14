@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Job Search Console</title>
+<style>
+  :root { --ink:#16233B; --navy:#1F3864; --navy-dark:#142748; --paper:#FAFAF8; --panel:#FFFFFF; --line:#E3E1DC; --muted:#6B6F76; --approve:#2E7D32; --approve-bg:#EEF7EE; --reject:#A63446; --reject-bg:#FBEFF0; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,"Segoe UI",Inter,Roboto,sans-serif; background:var(--paper); color:var(--ink); }
+  header { background: var(--navy); color: white; padding: 22px 32px; display:flex; justify-content:space-between; align-items:center; }
+  header h1 { font-size: 20px; margin: 0; }
+  header a { color: white; font-size: 13px; text-decoration: none; font-weight: 600; }
+  main { max-width: 1080px; margin: 0 auto; padding: 28px 32px 80px; }
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .stat .num { font-size: 24px; font-weight: 700; color: var(--navy); }
+  .stat .label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; margin-bottom: 20px; }
+  .panel h2 { font-size: 16px; margin: 0 0 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  tr:last-child td { border-bottom: none; }
+  tr.user-row { cursor: pointer; }
+  tr.user-row:hover { background: #FAFBFC; }
+  .badge { padding: 2px 8px; border-radius: 100px; font-size: 11px; font-weight: 700; }
+  .badge.ok { background: var(--approve-bg); color: var(--approve); }
+  .badge.bad { background: var(--reject-bg); color: var(--reject); }
+  button.primary { background: var(--navy); color: white; border: none; padding: 9px 16px; border-radius: 7px; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+  button.primary:hover { background: var(--navy-dark); }
+  .meta-line { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
+  #userDetail { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Admin — Job Search Console</h1>
+  <a href="/">&larr; Back to dashboard</a>
+</header>
+<main>
+  <div class="stats-row" id="statsRow"></div>
+
+  <div class="panel">
+    <h2>Job pool</h2>
+    <div class="meta-line" id="poolMeta"></div>
+    <button class="primary" id="refreshPoolBtn">Refresh job pool now</button>
+    <span id="refreshStatus" style="font-size:13px; color:var(--muted); margin-left:10px;"></span>
+  </div>
+
+  <div class="panel">
+    <h2>Users</h2>
+    <table id="usersTable">
+      <thead><tr><th>Email</th><th>Name</th><th>Signed up</th><th>Setup</th><th>Applications</th><th>Failures</th><th>Admin</th></tr></thead>
+      <tbody id="usersTableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="panel" id="userDetail">
+    <h2 id="userDetailTitle">User applications</h2>
+    <table>
+      <thead><tr><th>Date</th><th>Role</th><th>Company</th><th>Method</th><th>Status</th><th>ATS</th><th>Link</th></tr></thead>
+      <tbody id="userDetailBody"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+const $ = (sel) => document.querySelector(sel);
+function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str || ''; return d.innerHTML; }
+
+async function loadOverview() {
+  const res = await fetch('/api/admin/overview');
+  const s = await res.json();
+  const stats = [
+    ['Users', s.user_count], ['Applications sent', s.total_applications],
+    ['Emails sent', s.emails_sent], ['Email failures', s.email_failures],
+  ];
+  $('#statsRow').innerHTML = stats.map(([label, num]) => `<div class="stat"><div class="num">${num}</div><div class="label">${label}</div></div>`).join('');
+  $('#poolMeta').textContent = `${s.job_pool_size} postings in the shared pool` +
+    (s.last_refresh ? ` · last refresh: ${s.last_refresh.finished_at || 'in progress'} (${s.last_refresh.new_count ?? 0} new)` : ' · never refreshed yet');
+}
+
+async function loadUsers() {
+  const res = await fetch('/api/admin/users');
+  const data = await res.json();
+  const tbody = $('#usersTableBody');
+  tbody.innerHTML = '';
+  data.users.forEach(u => {
+    const tr = document.createElement('tr');
+    tr.className = 'user-row';
+    tr.innerHTML = `
+      <td>${escapeHtml(u.email)}</td>
+      <td>${escapeHtml(u.name)}</td>
+      <td>${escapeHtml((u.created_at || '').slice(0,10))}</td>
+      <td>${u.setup_complete ? '<span class="badge ok">Complete</span>' : '<span class="badge bad">Incomplete</span>'}</td>
+      <td>${u.applications}</td>
+      <td>${u.failures > 0 ? `<span class="badge bad">${u.failures}</span>` : '0'}</td>
+      <td>${u.is_admin ? '<span class="badge ok">Admin</span>' : ''}</td>`;
+    tr.addEventListener('click', () => loadUserDetail(u.id, u.email));
+    tbody.appendChild(tr);
+  });
+}
+
+async function loadUserDetail(userId, email) {
+  const res = await fetch(`/api/admin/user/${userId}/applications`);
+  const data = await res.json();
+  $('#userDetail').style.display = 'block';
+  $('#userDetailTitle').textContent = `Applications — ${email}`;
+  const tbody = $('#userDetailBody');
+  tbody.innerHTML = '';
+  if (!data.rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted);">No applications yet.</td></tr>';
+  }
+  data.rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml((r.applied_at || '').slice(0,10))}</td>
+      <td>${escapeHtml(r.title)}</td>
+      <td>${escapeHtml(r.company)}</td>
+      <td>${escapeHtml(r.apply_method)}</td>
+      <td>${escapeHtml(r.status)}</td>
+      <td>${r.ats_score ? r.ats_score + '%' : '—'}</td>
+      <td>${r.url ? `<a href="${r.url}" target="_blank" rel="noopener">Open</a>` : '—'}</td>`;
+    tbody.appendChild(tr);
+  });
+  $('#userDetail').scrollIntoView({ behavior: 'smooth' });
+}
+
+$('#refreshPoolBtn').addEventListener('click', async () => {
+  const btn = $('#refreshPoolBtn');
+  btn.disabled = true; btn.textContent = 'Refreshing…';
+  $('#refreshStatus').textContent = '';
+  try {
+    const res = await fetch('/api/admin/refresh_pool', { method: 'POST' });
+    const data = await res.json();
+    if (data.error) { $('#refreshStatus').textContent = 'Failed: ' + data.error; }
+    else {
+      $('#refreshStatus').textContent = `Done — ${data.raw_count} fetched, ${data.new_count} new.`;
+      loadOverview();
+    }
+  } catch (e) { $('#refreshStatus').textContent = 'Failed - check server logs.'; }
+  btn.disabled = false; btn.textContent = 'Refresh job pool now';
+});
+
+loadOverview();
+loadUsers();
+</script>
+</body>
+</html>
