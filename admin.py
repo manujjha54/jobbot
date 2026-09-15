@@ -80,7 +80,11 @@ def api_admin_user_applications(user_id):
 @admin_required
 def api_admin_refresh_pool():
     try:
-        result = job_pool.refresh_job_pool()
-        return jsonify({"ok": True, **result})
+        raw_count, new_count = job_pool.refresh_pool()
+        return jsonify({
+            "ok": True,
+            "raw_count": raw_count,
+            "new_count": new_count
+        })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"ok": False, "error": str(e)}), 500
