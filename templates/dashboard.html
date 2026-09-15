@@ -103,7 +103,6 @@
       font-size: 0.85rem;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.2s;
     }
 
     .container {
@@ -124,18 +123,6 @@
       padding: 2rem;
       backdrop-filter: blur(16px);
       box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
-    }
-
-    .card h2 {
-      font-size: 1.35rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-    }
-
-    .card p {
-      color: var(--text-muted);
-      font-size: 0.92rem;
-      margin-bottom: 1.5rem;
     }
 
     .form-input {
@@ -180,14 +167,20 @@
       gap: 6px;
     }
 
-    .btn-apply {
+    .btn-tailor {
       background: rgba(99, 102, 241, 0.2);
       border-color: rgba(99, 102, 241, 0.4);
       color: #c7d2fe;
     }
 
-    .btn-apply:hover {
+    .btn-tailor:hover {
       background: rgba(99, 102, 241, 0.35);
+    }
+
+    .btn-download {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #6ee7b7;
     }
 
     .skills-container {
@@ -204,7 +197,6 @@
       padding: 5px 12px;
       border-radius: 50px;
       font-size: 0.82rem;
-      font-weight: 500;
     }
 
     .results-table {
@@ -214,27 +206,36 @@
     }
 
     .results-table th, .results-table td {
-      padding: 14px 16px;
+      padding: 12px 14px;
       text-align: left;
       border-bottom: 1px solid var(--card-border);
-      font-size: 0.9rem;
+      font-size: 0.88rem;
     }
 
     .results-table th {
       color: var(--text-muted);
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
     .score-badge {
+      padding: 4px 8px;
+      border-radius: 50px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .score-matched {
       background: rgba(16, 185, 129, 0.15);
       border: 1px solid rgba(16, 185, 129, 0.3);
       color: #6ee7b7;
-      padding: 4px 10px;
-      border-radius: 50px;
-      font-size: 0.8rem;
-      font-weight: 700;
+    }
+
+    .score-low {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #fcd34d;
     }
 
     .status-msg {
@@ -258,7 +259,7 @@
       </div>
       <div class="logo-text-group">
         <div class="logo-title">JobBot</div>
-        <div class="logo-tagline">Smarter resumes. Faster applications. Zero hassle.</div>
+        <div class="logo-tagline">India Region | Precision ATS Keyword Injection</div>
       </div>
     </a>
     <div class="nav-actions">
@@ -271,55 +272,63 @@
   </header>
 
   <main class="container">
-    <!-- Step 1: Upload & Criteria -->
     <div class="card">
-      <h2>Step 1: Ingest Resume & Target Criteria</h2>
-      <p>Upload your resume to extract skills, experience, and configure your ATS threshold.</p>
+      <h2 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 0.5rem;">Step 1: Resume & Search Filters</h2>
+      <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.5rem;">Upload your resume, specify locations, and configure target criteria. Any role below your desired ATS score can be auto-tailored.</p>
 
       <form id="resume-form" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-        <input type="file" id="resume-file" name="resume" accept=".pdf,.docx,.txt" required style="color: var(--text-muted); font-size: 0.9rem;">
+        <input type="file" id="resume-file" name="resume" accept=".docx,.pdf" required style="color: var(--text-muted); font-size: 0.9rem;">
         <button type="submit" id="parse-btn" class="btn-primary">Parse Resume</button>
       </form>
 
       <div id="status-box" class="status-msg"></div>
 
-      <!-- Settings & ATS Score Form -->
       <div id="parsed-results" style="display: none; margin-top: 1.5rem; border-top: 1px solid var(--card-border); padding-top: 1.5rem;">
         <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
           <div>
-            <label style="font-size: 0.8rem; font-weight:600; color: #cbd5e1; display:block; margin-bottom: 4px;">Target Role Titles (Comma separated)</label>
-            <input type="text" id="target-titles" class="form-input" placeholder="e.g. Customer Success, Implementation, Onboarding">
+            <label style="font-size: 0.8rem; font-weight: 600; color: #cbd5e1; display: block; margin-bottom: 4px;">Target Role Titles (India)</label>
+            <input type="text" id="target-titles" class="form-input" placeholder="e.g. Customer Success Manager, Onboarding Specialist">
           </div>
           <div>
-            <label style="font-size: 0.8rem; font-weight:600; color: #cbd5e1; display:block; margin-bottom: 4px;">Years of Experience</label>
-            <input type="number" id="years-exp" class="form-input" placeholder="10">
+            <label style="font-size: 0.8rem; font-weight: 600; color: #cbd5e1; display: block; margin-bottom: 4px;">Years of Experience</label>
+            <input type="number" id="years-exp" class="form-input" value="10">
           </div>
           <div>
-            <label style="font-size: 0.8rem; font-weight:600; color: #cbd5e1; display:block; margin-bottom: 4px;">Required ATS Score (%)</label>
-            <input type="number" id="ats-min-score" class="form-input" value="70" min="10" max="100">
+            <label style="font-size: 0.8rem; font-weight: 600; color: #cbd5e1; display: block; margin-bottom: 4px;">Target ATS Score (%)</label>
+            <input type="number" id="ats-min-score" class="form-input" value="80" min="10" max="100">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 600; color: #cbd5e1; display: block; margin-bottom: 4px;">Preferred Indian Locations (Comma separated)</label>
+            <input type="text" id="target-locations" class="form-input" value="India, Bangalore, Mumbai, Gurgaon, Hyderabad, Noida, Pune, Ahmedabad">
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: 1.5rem;">
+            <input type="checkbox" id="remote-first" checked style="width: 18px; height: 18px; accent-color: var(--primary);">
+            <label for="remote-first" style="font-size: 0.88rem; color: #cbd5e1; cursor: pointer;">Include Remote Roles</label>
           </div>
         </div>
 
         <h4 style="font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Extracted Skills</h4>
         <div id="skills-list" class="skills-container"></div>
 
-        <button type="button" id="save-profile-btn" class="btn-primary" style="margin-top: 1.25rem;" onclick="saveAndScore()">Score Pool & Match Jobs →</button>
+        <button type="button" id="save-profile-btn" class="btn-primary" style="margin-top: 1.25rem;" onclick="saveAndScore()">Score India Pool & Show Opportunities →</button>
       </div>
     </div>
 
-    <!-- Step 2: Matched Jobs & Action Table -->
     <div class="card" id="match-section" style="display: none;">
-      <h2>Step 2: Scored Job Matches & Tailored Resumes</h2>
-      <p id="match-summary-text">Matched positions above your ATS threshold with generated resumes ready for manual submission.</p>
+      <h2 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 0.5rem;">Step 2: Scored Opportunities & Resume Tailoring</h2>
+      <p id="match-summary-text" style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.5rem;"></p>
 
       <div id="matches-output">
         <table class="results-table">
           <thead>
             <tr>
-              <th>Role & Company</th>
+              <th>Role & Organization</th>
               <th>Location</th>
-              <th>ATS Score</th>
-              <th>Tailored Resume</th>
+              <th>ATS Match Score</th>
+              <th>Resume (.docx)</th>
               <th>Manual Application</th>
             </tr>
           </thead>
@@ -359,7 +368,7 @@
       statusBox.style.display = 'block';
       statusBox.style.background = 'rgba(99, 102, 241, 0.15)';
       statusBox.style.color = '#c7d2fe';
-      statusBox.innerText = 'Extracting skills and profile metadata...';
+      statusBox.innerText = 'Extracting resume skills & background...';
 
       try {
         const res = await fetch('/api/parse_resume', { method: 'POST', body: formData });
@@ -394,7 +403,7 @@
       } catch (err) {
         statusBox.style.background = 'rgba(239, 68, 68, 0.15)';
         statusBox.style.color = '#fca5a5';
-        statusBox.innerText = 'Network error while parsing resume.';
+        statusBox.innerText = 'Network error while parsing.';
       } finally {
         parseBtn.disabled = false;
         parseBtn.innerText = 'Parse Resume';
@@ -406,18 +415,17 @@
       const targetTitlesRaw = document.getElementById('target-titles').value;
       const targetTitles = targetTitlesRaw.split(',').map(t => t.trim()).filter(Boolean);
       const yearsExp = parseInt(document.getElementById('years-exp').value, 10) || 0;
-      const atsMinScore = parseInt(document.getElementById('ats-min-score').value, 10) || 50;
+      const targetAts = parseInt(document.getElementById('ats-min-score').value, 10) || 80;
 
-      if (!targetTitles.length) {
-        alert('Please specify at least one target title (e.g. Customer Success, Implementation).');
-        return;
-      }
+      const locsRaw = document.getElementById('target-locations').value;
+      const locations = locsRaw.split(',').map(l => l.trim()).filter(Boolean);
+      const remoteFirst = document.getElementById('remote-first').checked;
 
       btn.disabled = true;
-      btn.innerText = 'Scoring & Tailoring Applications...';
+      btn.innerText = 'Scoring India Pool...';
 
       try {
-        const saveRes = await fetch('/api/save_profile', {
+        await fetch('/api/save_profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -425,15 +433,11 @@
             target_titles: targetTitles,
             must_have_skills: extractedSkills,
             years_experience: yearsExp,
-            ats_min_score: atsMinScore
+            ats_min_score: 30,
+            acceptable_locations: locations,
+            remote_first: remoteFirst
           })
         });
-
-        if (!saveRes.ok) {
-          const errData = await saveRes.json();
-          alert(errData.error || 'Could not save profile criteria.');
-          return;
-        }
 
         const matchRes = await fetch('/api/search', {
           method: 'POST',
@@ -447,26 +451,31 @@
         document.getElementById('match-section').style.display = 'block';
 
         if (matchData.jobs && matchData.jobs.length > 0) {
-          document.getElementById('match-summary-text').innerText = `Considered ${matchData.considered || matchData.jobs.length} jobs in pool — ${matchData.jobs.length} matched your minimum ATS threshold of ${atsMinScore}%.`;
+          document.getElementById('match-summary-text').innerText = `Fetched ${matchData.jobs.length} matching positions. Click 'Approve & Inject Keywords' on any vacancy to generate a bespoke tailored .docx resume.`;
           
           matchData.jobs.forEach(job => {
-            const row = document.createElement('tr');
-            
-            // Resume download action
-            const resumeActionHtml = job.decision_id 
-              ? `<a href="/api/download_resume/${job.decision_id}" class="btn-secondary" download>📄 Download Resume</a>`
-              : `<span style="font-size:0.8rem; color:var(--text-muted);">Standard Profile</span>`;
+            const rawScore = job.ats_score || job.base_ats_score || 60;
+            const isAboveTarget = rawScore >= targetAts;
+            const scoreClass = isAboveTarget ? 'score-matched' : 'score-low';
+            const jobId = job.id || job.job_posting_id;
 
+            const row = document.createElement('tr');
+            row.id = `job-row-${jobId}`;
             row.innerHTML = `
               <td>
                 <div style="font-weight: 700; color: var(--text);">${job.title || 'Role'}</div>
                 <div style="font-size: 0.82rem; color: var(--text-muted);">${job.company || 'Direct Employer'}</div>
               </td>
-              <td style="color: var(--text-muted);">${job.location || 'Remote'}</td>
-              <td><span class="score-badge">${job.ats_score || job.base_ats_score || 85}% Match</span></td>
-              <td>${resumeActionHtml}</td>
+              <td style="color: var(--text-muted);">${job.location || 'India / Remote'}</td>
+              <td><span id="score-val-${jobId}" class="score-badge ${scoreClass}">${rawScore}% ATS</span></td>
+              <td id="resume-cell-${jobId}">
+                ${job.decision_id && job.was_tailored
+                  ? `<a href="/api/download_resume/${job.decision_id}" class="btn-secondary btn-download" download>📄 Download .docx</a>`
+                  : `<button type="button" class="btn-secondary btn-tailor" onclick="tailorAndApprove(${jobId}, ${targetAts})">✨ Approve & Inject Keywords</button>`
+                }
+              </td>
               <td>
-                <a href="${job.url || '#'}" target="_blank" class="btn-secondary btn-apply" onclick="recordManualApply(${job.id || job.job_posting_id})">
+                <a href="${job.url || '#'}" target="_blank" class="btn-secondary" style="background: rgba(99, 102, 241, 0.25); color: #e0e7ff;" onclick="recordApply(${jobId})">
                   Apply on Job Site ↗
                 </a>
               </td>
@@ -474,26 +483,51 @@
             tbody.appendChild(row);
           });
         } else {
-          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--text-muted); padding: 2rem;">No matching jobs found matching ATS threshold of ${atsMinScore}%. Try lowering the score or broadening titles.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--text-muted); padding: 2rem;">No jobs found matching chosen criteria. Try broadening locations or target titles.</td></tr>`;
         }
       } catch (err) {
-        alert('Failed to score and fetch jobs.');
+        alert('Failed to score pool jobs.');
       } finally {
         btn.disabled = false;
-        btn.innerText = 'Score Pool & Match Jobs →';
+        btn.innerText = 'Score India Pool & Show Opportunities →';
       }
     }
 
-    async function recordManualApply(jobPostingId) {
-      if (!jobPostingId) return;
+    async function tailorAndApprove(jobId, targetAts) {
+      const cell = document.getElementById(`resume-cell-${jobId}`);
+      cell.innerHTML = `<span style="font-size:0.8rem; color:var(--accent);">Injecting keywords into .docx...</span>`;
+
+      try {
+        const res = await fetch('/api/tailor_and_approve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_id: jobId, target_ats: targetAts })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.ok) {
+          const scoreBadge = document.getElementById(`score-val-${jobId}`);
+          scoreBadge.className = 'score-badge score-matched';
+          scoreBadge.innerText = `${data.ats_score}% ATS (Tailored)`;
+
+          cell.innerHTML = `<a href="${data.download_url}" class="btn-secondary btn-download" download>📄 Download Tailored .docx</a>`;
+        } else {
+          cell.innerHTML = `<span style="font-size:0.8rem; color:#fca5a5;">Failed to tailor.</span>`;
+        }
+      } catch (e) {
+        cell.innerHTML = `<span style="font-size:0.8rem; color:#fca5a5;">Network error.</span>`;
+      }
+    }
+
+    async function recordApply(jobId) {
       try {
         await fetch('/api/decide', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ job_posting_id: jobPostingId, decision: 'approve' })
+          body: JSON.stringify({ job_posting_id: jobId, decision: 'approve' })
         });
       } catch (e) {
-        console.error('Could not record application status:', e);
+        console.error(e);
       }
     }
   </script>
