@@ -166,15 +166,28 @@
     }
 
     .btn-secondary {
-      padding: 8px 14px;
+      padding: 7px 12px;
       background: rgba(255, 255, 255, 0.06);
       border: 1px solid var(--card-border);
       border-radius: var(--radius-sm);
       color: var(--text);
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-weight: 600;
       cursor: pointer;
       text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-apply {
+      background: rgba(99, 102, 241, 0.2);
+      border-color: rgba(99, 102, 241, 0.4);
+      color: #c7d2fe;
+    }
+
+    .btn-apply:hover {
+      background: rgba(99, 102, 241, 0.35);
     }
 
     .skills-container {
@@ -258,10 +271,10 @@
   </header>
 
   <main class="container">
-    <!-- Step 1: Resume Upload & Parsing -->
+    <!-- Step 1: Upload & Criteria -->
     <div class="card">
       <h2>Step 1: Ingest Resume & Target Criteria</h2>
-      <p>Upload your resume to extract skills, experience, and target roles.</p>
+      <p>Upload your resume to extract skills, experience, and configure your ATS threshold.</p>
 
       <form id="resume-form" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
         <input type="file" id="resume-file" name="resume" accept=".pdf,.docx,.txt" required style="color: var(--text-muted); font-size: 0.9rem;">
@@ -270,30 +283,34 @@
 
       <div id="status-box" class="status-msg"></div>
 
-      <!-- Extracted Metadata Profile Form -->
+      <!-- Settings & ATS Score Form -->
       <div id="parsed-results" style="display: none; margin-top: 1.5rem; border-top: 1px solid var(--card-border); padding-top: 1.5rem;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
           <div>
             <label style="font-size: 0.8rem; font-weight:600; color: #cbd5e1; display:block; margin-bottom: 4px;">Target Role Titles (Comma separated)</label>
-            <input type="text" id="target-titles" class="form-input" placeholder="e.g. Customer Success Manager, Implementation Lead">
+            <input type="text" id="target-titles" class="form-input" placeholder="e.g. Customer Success, Implementation, Onboarding">
           </div>
           <div>
             <label style="font-size: 0.8rem; font-weight:600; color: #cbd5e1; display:block; margin-bottom: 4px;">Years of Experience</label>
             <input type="number" id="years-exp" class="form-input" placeholder="10">
+          </div>
+          <div>
+            <label style="font-size: 0.8rem; font-weight:600; color: #cbd5e1; display:block; margin-bottom: 4px;">Required ATS Score (%)</label>
+            <input type="number" id="ats-min-score" class="form-input" value="70" min="10" max="100">
           </div>
         </div>
 
         <h4 style="font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Extracted Skills</h4>
         <div id="skills-list" class="skills-container"></div>
 
-        <button type="button" id="save-profile-btn" class="btn-primary" style="margin-top: 1.25rem;" onclick="saveAndScore()">Confirm Profile & Find Matches →</button>
+        <button type="button" id="save-profile-btn" class="btn-primary" style="margin-top: 1.25rem;" onclick="saveAndScore()">Score Pool & Match Jobs →</button>
       </div>
     </div>
 
-    <!-- Step 2: Scored Job Matches Table -->
+    <!-- Step 2: Matched Jobs & Action Table -->
     <div class="card" id="match-section" style="display: none;">
-      <h2>Step 2: Scored Job Matches</h2>
-      <p id="match-summary-text">Open vacancies scored against your target titles & skills.</p>
+      <h2>Step 2: Scored Job Matches & Tailored Resumes</h2>
+      <p id="match-summary-text">Matched positions above your ATS threshold with generated resumes ready for manual submission.</p>
 
       <div id="matches-output">
         <table class="results-table">
@@ -301,8 +318,9 @@
             <tr>
               <th>Role & Company</th>
               <th>Location</th>
-              <th>Match Score</th>
-              <th>Action</th>
+              <th>ATS Score</th>
+              <th>Tailored Resume</th>
+              <th>Manual Application</th>
             </tr>
           </thead>
           <tbody id="matches-tbody"></tbody>
@@ -315,7 +333,6 @@
     let activeResumeToken = null;
     let extractedSkills = [];
 
-    // Logout Handler
     async function handleLogout() {
       try {
         await fetch('/api/logout', { method: 'POST' });
@@ -326,7 +343,6 @@
       }
     }
 
-    // Step 1: Parse Resume
     document.getElementById('resume-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const fileInput = document.getElementById('resume-file');
@@ -385,12 +401,12 @@
       }
     });
 
-    // Step 2: Save Profile & Search Matches
     async function saveAndScore() {
       const btn = document.getElementById('save-profile-btn');
       const targetTitlesRaw = document.getElementById('target-titles').value;
       const targetTitles = targetTitlesRaw.split(',').map(t => t.trim()).filter(Boolean);
       const yearsExp = parseInt(document.getElementById('years-exp').value, 10) || 0;
+      const atsMinScore = parseInt(document.getElementById('ats-min-score').value, 10) || 50;
 
       if (!targetTitles.length) {
         alert('Please specify at least one target title (e.g. Customer Success, Implementation).');
@@ -398,19 +414,18 @@
       }
 
       btn.disabled = true;
-      btn.innerText = 'Scoring Candidate Matches...';
+      btn.innerText = 'Scoring & Tailoring Applications...';
 
       try {
-        // 1. Save profile to DB
         const saveRes = await fetch('/api/save_profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             resume_token: activeResumeToken,
             target_titles: targetTitles,
-            must_have_skills: extractedSkills.slice(0, 15),
+            must_have_skills: extractedSkills,
             years_experience: yearsExp,
-            ats_min_score: 50
+            ats_min_score: atsMinScore
           })
         });
 
@@ -420,7 +435,6 @@
           return;
         }
 
-        // 2. Query match engine
         const matchRes = await fetch('/api/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -433,31 +447,53 @@
         document.getElementById('match-section').style.display = 'block';
 
         if (matchData.jobs && matchData.jobs.length > 0) {
-          document.getElementById('match-summary-text').innerText = `Considered ${matchData.considered || matchData.jobs.length} jobs in pool — ${matchData.jobs.length} matched above ATS threshold.`;
+          document.getElementById('match-summary-text').innerText = `Considered ${matchData.considered || matchData.jobs.length} jobs in pool — ${matchData.jobs.length} matched your minimum ATS threshold of ${atsMinScore}%.`;
           
           matchData.jobs.forEach(job => {
             const row = document.createElement('tr');
+            
+            // Resume download action
+            const resumeActionHtml = job.decision_id 
+              ? `<a href="/api/download_resume/${job.decision_id}" class="btn-secondary" download>📄 Download Resume</a>`
+              : `<span style="font-size:0.8rem; color:var(--text-muted);">Standard Profile</span>`;
+
             row.innerHTML = `
               <td>
                 <div style="font-weight: 700; color: var(--text);">${job.title || 'Role'}</div>
-                <div style="font-size: 0.82rem; color: var(--text-muted);">${job.company || 'Direct'}</div>
+                <div style="font-size: 0.82rem; color: var(--text-muted);">${job.company || 'Direct Employer'}</div>
               </td>
               <td style="color: var(--text-muted);">${job.location || 'Remote'}</td>
-              <td><span class="score-badge">${job.ats_score || job.base_ats_score || 85}% ATS Match</span></td>
+              <td><span class="score-badge">${job.ats_score || job.base_ats_score || 85}% Match</span></td>
+              <td>${resumeActionHtml}</td>
               <td>
-                <a href="${job.url || '#'}" target="_blank" class="btn-secondary" style="margin-right: 6px;">View Role ↗</a>
+                <a href="${job.url || '#'}" target="_blank" class="btn-secondary btn-apply" onclick="recordManualApply(${job.id || job.job_posting_id})">
+                  Apply on Job Site ↗
+                </a>
               </td>
             `;
             tbody.appendChild(row);
           });
         } else {
-          tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color: var(--text-muted); padding: 2rem;">No matching jobs found with current target titles. Try broadening the target role titles above.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--text-muted); padding: 2rem;">No matching jobs found matching ATS threshold of ${atsMinScore}%. Try lowering the score or broadening titles.</td></tr>`;
         }
       } catch (err) {
         alert('Failed to score and fetch jobs.');
       } finally {
         btn.disabled = false;
-        btn.innerText = 'Confirm Profile & Find Matches →';
+        btn.innerText = 'Score Pool & Match Jobs →';
+      }
+    }
+
+    async function recordManualApply(jobPostingId) {
+      if (!jobPostingId) return;
+      try {
+        await fetch('/api/decide', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_posting_id: jobPostingId, decision: 'approve' })
+        });
+      } catch (e) {
+        console.error('Could not record application status:', e);
       }
     }
   </script>
