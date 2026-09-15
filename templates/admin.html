@@ -136,9 +136,7 @@
       </div>
       <span class="admin-badge">ADMIN CONSOLE</span>
     </div>
-    <form action="/api/logout" method="POST" style="margin: 0; display: inline;">
-  <button type="submit" class="btn-logout" style="cursor: pointer;">Sign Out</button>
-</form>
+    <button type="button" class="btn-logout" onclick="handleLogout()" style="cursor: pointer;">Sign Out</button>
   </header>
 
   <main class="container">
@@ -151,6 +149,18 @@
       </form>
     </div>
   </main>
+
+<script>
+    async function handleLogout() {
+      try {
+        await fetch('/api/logout', { method: 'POST' });
+      } catch (err) {
+        console.error('Logout error:', err);
+      } finally {
+        window.location.href = '/login';
+      }
+    }
+  </script>
 
 </body>
 </html>
