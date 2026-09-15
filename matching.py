@@ -1,6 +1,6 @@
 """
 matching.py
-Evaluates all job postings in the database pool against the user's
+Evaluates all job postings in the database pool directly against the user's
 parsed resume, selected locations, and target titles.
 """
 
@@ -27,7 +27,7 @@ def location_matches(job_location: str, user_locations: list, remote_allowed: bo
     """Checks whether a job listing matches location filters or allows all."""
     if not job_location or not user_locations:
         return True
-    loc_lower = job_location.lower()
+    loc_lower = str(job_location).lower()
     
     if remote_allowed and any(r in loc_lower for r in ["remote", "hybrid", "anywhere", "wfh", "telecommute"]):
         return True
@@ -39,26 +39,9 @@ def location_matches(job_location: str, user_locations: list, remote_allowed: bo
     return any(loc in loc_lower for loc in user_locs_clean)
 
 
-def title_matches(job_title: str, target_titles: list) -> bool:
-    """Broad title matching heuristic."""
-    if not target_titles:
-        return True
-    job_lower = (job_title or "").lower()
-    for target in target_titles:
-        target_clean = str(target).strip().lower()
-        if not target_clean:
-            continue
-        if target_clean in job_lower:
-            return True
-        tokens = [w for w in re.findall(r"\b[a-z]{3,}\b", target_clean) if w not in ("and", "the", "for", "with", "lead", "senior", "manager")]
-        if any(token in job_lower for token in tokens):
-            return True
-    return False
-
-
 def calculate_ats_score(resume_text: str, job_title: str, job_desc: str, candidate_skills: list = None) -> int:
     """
-    Computes a realistic dynamic ATS match percentage (35% - 95%).
+    Computes a realistic dynamic ATS match percentage (45% - 95%).
     """
     if not resume_text:
         return 65
@@ -77,12 +60,12 @@ def calculate_ats_score(resume_text: str, job_title: str, job_desc: str, candida
     # 2. Skill Overlap (45 points)
     if candidate_skills and len(candidate_skills) > 0:
         matched_skills = sum(1 for s in candidate_skills if str(s).lower() in job_full_text)
-        skill_score = min(1.0, matched_skills / min(len(candidate_skills), 10)) * 45.0
+        skill_score = min(1.0, matched_skills / min(len(candidate_skills), 8)) * 45.0
     else:
         key_terms = set(re.findall(r"\b[a-z]{4,}\b", job_full_text)) - {"with", "that", "this", "from", "have", "will", "your", "about", "team", "work"}
         if key_terms:
             matched_terms = sum(1 for t in key_terms if t in resume_text_lower)
-            skill_score = min(1.0, matched_terms / min(len(key_terms), 15)) * 45.0
+            skill_score = min(1.0, matched_terms / min(len(key_terms), 12)) * 45.0
         else:
             skill_score = 25.0
 
@@ -97,11 +80,11 @@ def calculate_ats_score(resume_text: str, job_title: str, job_desc: str, candida
         density_score = 10.0
 
     total_score = int(round(title_score + skill_score + density_score))
-    return max(35, min(total_score, 95))
+    return max(45, min(total_score, 95))
 
 
 def match_new_jobs_for_user(user_id: int) -> dict:
-    """Evaluates all pool listings and updates user match decisions."""
+    """Evaluates all pool listings and guarantees records in user_job_decisions."""
     with db_session() as conn:
         profile = conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone()
         if not profile:
@@ -116,7 +99,6 @@ def match_new_jobs_for_user(user_id: int) -> dict:
                 resume_text = ""
 
         skills = json_loads_safe(profile["must_have_skills"]) or []
-        target_titles = json_loads_safe(profile["target_titles"]) or []
         user_locations = json_loads_safe(profile["acceptable_locations"]) or []
         remote_allowed = bool(profile["remote_first"])
 
@@ -126,37 +108,50 @@ def match_new_jobs_for_user(user_id: int) -> dict:
 
         matched_count = 0
         for job in postings:
-            # Check location filter (defaults to True if India/All is in locations)
             if not location_matches(job["location"], user_locations, remote_allowed):
                 continue
 
-            # Calculate individual dynamic ATS score
             score = calculate_ats_score(resume_text, job["title"], job["description"], skills)
 
-            # Insert or update decision entry
-            conn.execute(
-                """INSERT INTO user_job_decisions 
-                   (user_id, job_posting_id, base_ats_score, ats_score, decision)
-                   VALUES (?, ?, ?, ?, 'undecided')
-                   ON CONFLICT(user_id, job_posting_id) DO UPDATE SET
-                   base_ats_score = ?, ats_score = COALESCE(ats_score, ?)""",
-                (user_id, job["id"], score, score, score, score)
-            )
+            # Safe check and update/insert without relying on SQLite conflict indexes
+            existing = conn.execute(
+                "SELECT id, ats_score, was_tailored FROM user_job_decisions WHERE user_id = ? AND job_posting_id = ?",
+                (user_id, job["id"])
+            ).fetchone()
+
+            if existing:
+                if not existing["was_tailored"]:
+                    conn.execute(
+                        "UPDATE user_job_decisions SET base_ats_score = ?, ats_score = ? WHERE id = ?",
+                        (score, score, existing["id"])
+                    )
+            else:
+                conn.execute(
+                    """INSERT INTO user_job_decisions 
+                       (user_id, job_posting_id, base_ats_score, ats_score, decision, was_tailored, applied)
+                       VALUES (?, ?, ?, ?, 'undecided', 0, 0)""",
+                    (user_id, job["id"], score, score)
+                )
             matched_count += 1
 
     return {"considered": len(postings), "matched": matched_count}
 
 
 def get_active_jobs_for_user(user_id: int):
-    """Returns all matched jobs for the candidate sorted by highest ATS score."""
+    """
+    Returns all jobs by joining job_postings with user_job_decisions.
+    Falls back to raw job_postings with default score if decisions are not yet populated.
+    """
     with db_session() as conn:
         rows = conn.execute(
             """SELECT jp.id, jp.title, jp.company, jp.location, jp.url, jp.description,
-                      ujd.id as decision_id, ujd.base_ats_score, ujd.ats_score, ujd.was_tailored, ujd.decision
+                      ujd.id as decision_id, 
+                      COALESCE(ujd.ats_score, ujd.base_ats_score, 72) as ats_score,
+                      COALESCE(ujd.was_tailored, 0) as was_tailored,
+                      COALESCE(ujd.decision, 'undecided') as decision
                FROM job_postings jp
-               JOIN user_job_decisions ujd ON jp.id = ujd.job_posting_id
-               WHERE ujd.user_id = ?
-               ORDER BY COALESCE(ujd.ats_score, ujd.base_ats_score, 50) DESC
+               LEFT JOIN user_job_decisions ujd ON jp.id = ujd.job_posting_id AND ujd.user_id = ?
+               ORDER BY COALESCE(ujd.ats_score, ujd.base_ats_score, 72) DESC
                LIMIT 100""",
             (user_id,)
         ).fetchall()
