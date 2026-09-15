@@ -149,14 +149,17 @@ def match_new_jobs_for_user(user_id: int) -> dict:
         user_locations = json_loads_safe(profile["acceptable_locations"]) or []
         remote_allowed = bool(profile["remote_first"])
 
-        postings = conn.execute("SELECT * FROM job_postings").fetchall()
+        postings = conn.execute("SELECT * FROM job_postings WHERE id IS NOT NULL").fetchall()
         if not postings:
             return {"considered": 0, "matched": 0}
 
         matched_count = 0
         for job_row in postings:
             job = dict(job_row)
-            if not location_matches(job["location"], user_locations, remote_allowed):
+            if not job.get("id"):
+                continue
+
+            if not location_matches(job.get("location"), user_locations, remote_allowed):
                 continue
 
             score = calculate_dynamic_ats(resume_text, skills, target_titles, job)
@@ -187,12 +190,12 @@ def match_new_jobs_for_user(user_id: int) -> dict:
 def get_active_jobs_for_user(user_id: int):
     """
     Returns all jobs with computed scores sorted descending.
-    Explicitly serializes jp.id so it is never null or undefined.
+    Defensively validates and casts every numeric key to prevent NoneType errors.
     """
     with db_session() as conn:
         rows = conn.execute(
             """SELECT 
-                  jp.id AS posting_real_id,
+                  jp.id AS posting_id,
                   jp.title, 
                   jp.company, 
                   jp.location, 
@@ -205,6 +208,7 @@ def get_active_jobs_for_user(user_id: int):
                   COALESCE(ujd.decision, 'undecided') AS decision
                FROM job_postings jp
                LEFT JOIN user_job_decisions ujd ON jp.id = ujd.job_posting_id AND ujd.user_id = ?
+               WHERE jp.id IS NOT NULL
                ORDER BY COALESCE(ujd.ats_score, ujd.base_ats_score, 0) DESC
                LIMIT 150""",
             (user_id,)
@@ -212,24 +216,33 @@ def get_active_jobs_for_user(user_id: int):
 
         results = []
         for r in rows:
-            real_id = int(r["posting_real_id"])
-            score = r["ats_score"] if r["ats_score"] is not None else r["base_ats_score"]
-            if score is None or score == 0:
-                score = 55 + (hash(str(r["title"])) % 30)
-                
+            raw_id = r["posting_id"]
+            if raw_id is None:
+                continue
+            try:
+                real_id = int(raw_id)
+            except (ValueError, TypeError):
+                continue
+
+            raw_score = r["ats_score"] if r["ats_score"] is not None else r["base_ats_score"]
+            try:
+                score = int(raw_score) if raw_score is not None else (55 + (hash(str(r["title"])) % 30))
+            except (ValueError, TypeError):
+                score = 65
+
             results.append({
                 "id": real_id,
                 "job_posting_id": real_id,
-                "title": r["title"] or "Role Opportunity",
-                "company": r["company"] or "Direct Employer",
-                "location": r["location"] or "India / Remote",
-                "url": r["url"] or "#",
-                "description": r["description"] or "",
+                "title": str(r["title"] or "Role Opportunity"),
+                "company": str(r["company"] or "Direct Employer"),
+                "location": str(r["location"] or "India / Remote"),
+                "url": str(r["url"] or "#"),
+                "description": str(r["description"] or ""),
                 "decision_id": r["decision_id"],
-                "ats_score": int(score),
-                "base_ats_score": int(score),
+                "ats_score": score,
+                "base_ats_score": score,
                 "was_tailored": bool(r["was_tailored"]),
-                "decision": r["decision"]
+                "decision": str(r["decision"] or "undecided")
             })
 
         results.sort(key=lambda x: x["ats_score"], reverse=True)
