@@ -1,8 +1,8 @@
 """
 app.py
-Main Flask app: wires together auth, the per-user dashboard, and the admin
-panel. Run with `python app.py` for local dev, or via gunicorn in production
-(see README for deployment).
+Main Flask app: wires together auth, the per-user dashboard, the admin
+panel, and ATS resume tailoring. Run with `python app.py` for local dev,
+or via gunicorn in production.
 """
 
 import os
@@ -90,7 +90,7 @@ def api_parse_resume():
     if not file or file.filename == "":
         return jsonify({"error": "No file uploaded."}), 400
     filename = file.filename
-    if not filename.lower().endswith((".docx", ".pdf")):
+    if not filename.lower().endswith((".docx", ".pdf", ".txt")):
         return jsonify({"error": "Please upload a .docx or .pdf resume."}), 400
 
     file_bytes = file.read()
@@ -247,27 +247,37 @@ def api_tailor_and_approve():
         job = conn.execute("SELECT * FROM job_postings WHERE id = ?", (job_id,)).fetchone()
 
         if not profile or not profile["resume_blob"]:
-            return jsonify({"error": "Please upload a resume first."}), 400
+            return jsonify({"error": "No resume found. Please upload a resume first."}), 400
         if not job:
-            return jsonify({"error": "Job not found."}), 404
+            return jsonify({"error": "Job posting not found."}), 404
 
-        # Extract words from job title and description
-        job_words = re.findall(r"\b[A-Za-z]{3,}\b", f"{job['title']} {job['description'] or ''}")
-        resume_text = resume_tailor.extract_resume_text(profile["resume_blob"]).lower()
+        # Extract words from job description and title
+        job_full_text = f"{job['title']} {job['description'] or ''}"
+        job_words = re.findall(r"\b[A-Za-z]{4,}\b", job_full_text)
         
-        # Identify missing keywords
+        resume_raw = resume_tailor.extract_resume_text(profile["resume_blob"])
+        if not resume_raw:
+            resume_raw = profile_builder.extract_text_from_upload(profile["resume_blob"], profile["resume_filename"] or "resume.docx")
+
+        resume_lower = (resume_raw or "").lower()
         missing_kw = []
         for word in job_words:
             w_lower = word.lower()
-            if w_lower not in resume_text and w_lower not in [k.lower() for k in missing_kw]:
-                missing_kw.append(word)
+            if w_lower not in resume_lower and w_lower not in ("with", "that", "this", "from", "have", "will", "your", "about", "team", "work"):
+                if word not in missing_kw:
+                    missing_kw.append(word)
             if len(missing_kw) >= 10:
                 break
 
-        # Generate tailored .docx resume with missing keywords injected
-        tailored_blob = resume_tailor.tailor_resume(profile["resume_blob"], missing_kw)
-        safe_company = "".join(c for c in (job["company"] or "Company") if c.isalnum() or c in (' ', '_')).rstrip()
-        tailored_filename = f"Tailored_{safe_company}_Resume.docx"
+        # Generate tailored .docx binary
+        tailored_blob = resume_tailor.tailor_resume(
+            profile["resume_blob"],
+            missing_kw,
+            raw_text_fallback=resume_raw
+        )
+
+        company_clean = re.sub(r"[^\w\s-]", "", job["company"] or "Company").strip().replace(" ", "_")
+        tailored_filename = f"Tailored_{company_clean}_Resume.docx"
 
         # Check existing decision or insert
         existing_dec = conn.execute(
@@ -275,7 +285,7 @@ def api_tailor_and_approve():
             (user_id, job_id)
         ).fetchone()
 
-        base_score = existing_dec["base_ats_score"] if existing_dec else (target_ats - 15)
+        base_score = existing_dec["base_ats_score"] if existing_dec else max(45, target_ats - 15)
 
         if existing_dec:
             conn.execute(
