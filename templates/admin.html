@@ -136,7 +136,9 @@
       </div>
       <span class="admin-badge">ADMIN CONSOLE</span>
     </div>
-    <a href="/logout" class="btn-logout">Sign Out</a>
+    <form action="/api/logout" method="POST" style="margin: 0; display: inline;">
+  <button type="submit" class="btn-logout" style="cursor: pointer;">Sign Out</button>
+</form>
   </header>
 
   <main class="container">

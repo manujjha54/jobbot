@@ -195,7 +195,9 @@
     </a>
     <div class="nav-actions">
       <span style="font-size: 0.88rem; color: var(--text-muted);">{{ user_email if user_email else '' }}</span>
-      <a href="/logout" class="btn-logout">Sign Out</a>
+      <form action="/api/logout" method="POST" style="margin: 0; display: inline;">
+  <button type="submit" class="btn-logout" style="cursor: pointer;">Sign Out</button>
+</form>
     </div>
   </header>
 
