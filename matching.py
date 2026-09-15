@@ -212,7 +212,7 @@ def get_active_jobs_for_user(user_id: int):
             d = dict(r)
             score = d["ats_score"] if d["ats_score"] is not None else d["base_ats_score"]
             if score is None or score == 0:
-                score = 55 + (hash(d["title"]) % 30)
+                score = 55 + (hash(d.get("title", "")) % 30)
             d["ats_score"] = int(score)
             results.append(d)
 
