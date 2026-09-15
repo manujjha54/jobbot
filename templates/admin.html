@@ -80,8 +80,36 @@
       letter-spacing: 0.5px;
     }
 
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .nav-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .nav-link:hover {
+      color: var(--text);
+    }
+
+    .btn-logout {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
     .container {
-      max-width: 1200px;
+      max-width: 1100px;
       width: 100%;
       margin: 2rem auto;
       padding: 0 1.5rem;
@@ -96,28 +124,32 @@
       border-radius: var(--radius-lg);
       padding: 2rem;
       backdrop-filter: blur(16px);
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
     }
 
     .btn-action {
       background: var(--primary-gradient);
       color: white;
       border: none;
-      padding: 10px 18px;
+      padding: 11px 20px;
       border-radius: var(--radius-sm);
       font-weight: 600;
       cursor: pointer;
-      font-size: 0.9rem;
+      font-size: 0.92rem;
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+      transition: opacity 0.2s;
     }
 
-    .btn-logout {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid var(--card-border);
-      color: var(--text);
-      padding: 6px 14px;
+    .btn-action:hover {
+      opacity: 0.92;
+    }
+
+    .status-banner {
+      padding: 12px 16px;
       border-radius: var(--radius-sm);
-      text-decoration: none;
-      font-size: 0.85rem;
-      font-weight: 600;
+      font-size: 0.9rem;
+      margin-top: 1.25rem;
+      display: none;
     }
   </style>
 </head>
@@ -125,32 +157,41 @@
 
   <header>
     <div class="brand-group">
-      <div class="logo-badge">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-          <circle cx="12" cy="12" r="3"/>
-        </svg>
-      </div>
-      <div>
-        <div class="logo-title">JobBot Admin</div>
-      </div>
+      <a href="/" style="display:flex; align-items:center; gap:14px; text-decoration:none;">
+        <div class="logo-badge">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </div>
+        <div>
+          <div class="logo-title">JobBot Admin</div>
+        </div>
+      </a>
       <span class="admin-badge">ADMIN CONSOLE</span>
     </div>
-    <button type="button" class="btn-logout" onclick="handleLogout()" style="cursor: pointer;">Sign Out</button>
+
+    <div class="nav-actions">
+      <a href="/" class="nav-link">← Back to Dashboard</a>
+      <button type="button" class="btn-logout" onclick="handleLogout()">Sign Out</button>
+    </div>
   </header>
 
   <main class="container">
     <div class="card">
-      <h2 style="font-size: 1.3rem; margin-bottom: 0.5rem;">Job Pool Controls</h2>
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Refresh the shared candidate job pool from Adzuna / RemoteOK.</p>
+      <h2 style="font-size: 1.35rem; margin-bottom: 0.5rem;">Job Pool Management</h2>
+      <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.5rem;">Fetch and ingest fresh job listings from connected providers into the central pool.</p>
       
-      <form action="/api/admin/refresh_pool" method="POST">
-        <button type="submit" class="btn-action">Refresh Job Pool Now</button>
+      <form id="refresh-pool-form">
+        <button type="submit" id="refresh-btn" class="btn-action">Refresh Job Pool Now</button>
       </form>
+
+      <div id="refresh-status" class="status-banner"></div>
     </div>
   </main>
 
-<script>
+  <script>
+    // Logout Handler
     async function handleLogout() {
       try {
         await fetch('/api/logout', { method: 'POST' });
@@ -160,6 +201,42 @@
         window.location.href = '/login';
       }
     }
+
+    // Refresh Pool Handler
+    document.getElementById('refresh-pool-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('refresh-btn');
+      const statusBox = document.getElementById('refresh-status');
+
+      btn.disabled = true;
+      btn.innerText = 'Fetching Jobs...';
+      statusBox.style.display = 'block';
+      statusBox.style.background = 'rgba(99, 102, 241, 0.15)';
+      statusBox.style.color = '#c7d2fe';
+      statusBox.innerText = 'Connecting to job boards and updating candidate pool...';
+
+      try {
+        const res = await fetch('/api/admin/refresh_pool', { method: 'POST' });
+        const data = await res.json();
+
+        if (res.ok && data.ok) {
+          statusBox.style.background = 'rgba(16, 185, 129, 0.15)';
+          statusBox.style.color = '#6ee7b7';
+          statusBox.innerText = `Job pool successfully updated! Added ${data.new_count || 0} new job postings (${data.raw_count || 0} total fetched).`;
+        } else {
+          statusBox.style.background = 'rgba(239, 68, 68, 0.15)';
+          statusBox.style.color = '#fca5a5';
+          statusBox.innerText = data.error || 'Failed to refresh job pool.';
+        }
+      } catch (err) {
+        statusBox.style.background = 'rgba(239, 68, 68, 0.15)';
+        statusBox.style.color = '#fca5a5';
+        statusBox.innerText = 'Network error while refreshing job pool.';
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Refresh Job Pool Now';
+      }
+    });
   </script>
 
 </body>
