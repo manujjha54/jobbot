@@ -380,7 +380,7 @@
       searchBtn.innerText = 'Scoring Matches...';
 
       try {
-        const res = await fetch('/api/search_jobs', {
+        const res = await fetch('/api/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ resume_token: activeResumeToken })

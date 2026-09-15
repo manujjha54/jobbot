@@ -31,14 +31,54 @@ app.register_blueprint(admin_bp)
 init_db()
 
 
+def is_current_admin():
+    email = (session.get("email") or "").strip().lower()
+    admin_env = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+    return bool(session.get("is_admin")) or (bool(admin_env) and email == admin_env) or (email == "manujjha54@gmail.com")
+
+
+# ---------- Web Page Routes ----------
+
 @app.route("/")
 def index():
     if not session.get("user_id"):
         return redirect("/login")
-    return render_template("dashboard.html")
+    return render_template(
+        "dashboard.html",
+        user_email=session.get("email", ""),
+        is_admin=is_current_admin()
+    )
 
 
-# ---------- Setup ----------
+@app.route("/login")
+def login_page():
+    if session.get("user_id"):
+        return redirect("/")
+    return render_template("login.html")
+
+
+@app.route("/signup")
+def signup_page():
+    if session.get("user_id"):
+        return redirect("/")
+    return render_template("signup.html")
+
+
+@app.route("/admin")
+def admin_page():
+    if not session.get("user_id"):
+        return redirect("/login")
+    if not is_current_admin():
+        return redirect("/")
+    return render_template("admin.html", is_admin=True)
+
+
+@app.route("/deck")
+def deck_view():
+    return render_template("presentation.html")
+
+
+# ---------- Setup APIs ----------
 
 @app.route("/api/parse_resume", methods=["POST"])
 @login_required
@@ -60,13 +100,10 @@ def api_parse_resume():
     if not text.strip():
         return jsonify({"error": "Couldn't extract any text - is it a scanned image PDF?"}), 400
 
-    # Stage the file server-side (DB row, not the session cookie - cookies
-    # have a ~4KB limit and resumes are bigger than that). The frontend
-    # holds onto this token and passes it to save_profile.
     token = secrets.token_urlsafe(24)
     user_id = current_user_id()
     with db_session() as conn:
-        conn.execute("DELETE FROM pending_resumes WHERE user_id = ?", (user_id,))  # clear any stale upload
+        conn.execute("DELETE FROM pending_resumes WHERE user_id = ?", (user_id,))
         conn.execute(
             "INSERT INTO pending_resumes (token, user_id, filename, blob) VALUES (?, ?, ?, ?)",
             (token, user_id, filename, file_bytes),
@@ -167,12 +204,12 @@ def api_status():
         "resume_exists": bool(profile["resume_blob"]) if profile else False,
         "gmail_configured": bool(profile["gmail_email"] and profile["gmail_app_password_encrypted"]) if profile else False,
         "send_emails_enabled": bool(profile["send_emails_enabled"]) if profile else False,
-        "is_admin": bool(session.get("is_admin")),
+        "is_admin": is_current_admin(),
         "job_pool_size": job_pool.pool_size(),
     })
 
 
-# ---------- Search & Review ----------
+# ---------- Search & Review APIs ----------
 
 @app.route("/api/search", methods=["POST"])
 @login_required
@@ -183,8 +220,8 @@ def api_search():
         return jsonify({"error": result["error"]}), 400
     jobs = matching.get_active_jobs_for_user(user_id)
     return jsonify({
-        "considered": result["considered"],
-        "matched": result["matched"],
+        "considered": result.get("considered", 0),
+        "matched": result.get("matched", 0),
         "jobs": jobs,
     })
 
@@ -282,8 +319,8 @@ def api_dashboard():
 
     rows = [dict(r) for r in rows]
     for r in rows:
-        r.pop("tailored_resume_blob", None)  # binary - not JSON serializable, and not needed inline (downloaded separately)
-        r.pop("cover_letter", None)  # can be long; not needed in the table view
+        r.pop("tailored_resume_blob", None)
+        r.pop("cover_letter", None)
     total = len(rows)
     sent = sum(1 for r in rows if r["apply_method"] == "email")
     manual_pending = sum(1 for r in rows if r["apply_method"] == "manual_link")
