@@ -195,7 +195,7 @@
     </a>
     <div class="nav-actions">
       <span style="font-size: 0.88rem; color: var(--text-muted);">{{ user_email if user_email else '' }}</span>
-      <a href="/logout" class="btn-logout">Sign Out</a>
+      <a href="{{ url_for('auth.logout') }}" class="btn-logout">Sign Out</a>
     </div>
   </header>
 
