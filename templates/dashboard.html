@@ -342,7 +342,6 @@
     let activeResumeToken = null;
     let extractedSkills = [];
 
-    // Check status on page load to restore UI if resume exists
     window.addEventListener('DOMContentLoaded', async () => {
       try {
         const res = await fetch('/api/status');

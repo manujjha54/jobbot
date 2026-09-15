@@ -1,7 +1,7 @@
 """
 app.py
-Main Flask app: wires together auth, the per-user dashboard, the admin
-panel, and ATS resume tailoring.
+Main Flask application routing auth, admin actions, job pool evaluation,
+and ATS document tailoring.
 """
 
 import os
@@ -9,7 +9,6 @@ import json
 import io
 import re
 import traceback
-from datetime import datetime
 
 from flask import Flask, jsonify, request, render_template, session, send_file, redirect
 
@@ -25,7 +24,7 @@ from crypto_utils import encrypt
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-only-insecure-key-change-in-production")
-app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024  # 8MB cap
+app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024  # 8MB upload cap
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp)
@@ -97,9 +96,9 @@ def api_parse_resume():
     try:
         text = profile_builder.extract_text_from_upload(file_bytes, filename)
     except Exception as e:
-        return jsonify({"error": f"Could not read resume: {str(e)}"}), 400
+        return jsonify({"error": f"Could not read that resume: {str(e)}"}), 400
 
-    if not text.strip():
+    if not text or not text.strip():
         return jsonify({"error": "Couldn't extract text from file."}), 400
 
     token = secrets.token_urlsafe(24)

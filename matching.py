@@ -57,25 +57,12 @@ def extract_text_safely(blob, filename="resume.docx"):
         return ""
 
 
-def location_matches(job_location, user_locations, remote_allowed):
-    """Checks whether a job listing matches location filters or allows all."""
-    if not job_location or not user_locations:
-        return True
-    loc_lower = str(job_location).lower()
-    
-    if remote_allowed and any(r in loc_lower for r in ["remote", "hybrid", "anywhere", "wfh", "telecommute"]):
-        return True
-        
-    user_locs_clean = [str(l).strip().lower() for l in user_locations if str(l).strip()]
-    if not user_locs_clean or "india" in user_locs_clean or "all" in user_locs_clean:
-        return True
-        
-    return any(loc in loc_lower for loc in user_locs_clean)
-
-
 def calculate_dynamic_ats(resume_text, candidate_skills, candidate_titles, job):
     """
-    Computes a dynamic ATS score (38% - 96%).
+    Computes a realistic dynamic ATS score (38% - 96%).
+    - Title Match: 40 pts
+    - Skill Overlap: 40 pts
+    - Content/Term Density: 20 pts
     """
     job_title = str(job.get("title") or "").lower()
     job_desc = str(job.get("description") or "").lower()
@@ -146,8 +133,6 @@ def match_new_jobs_for_user(user_id: int) -> dict:
 
         skills = json_loads_safe(profile["must_have_skills"]) or []
         target_titles = json_loads_safe(profile["target_titles"]) or []
-        user_locations = json_loads_safe(profile["acceptable_locations"]) or []
-        remote_allowed = bool(profile["remote_first"])
 
         postings = conn.execute("SELECT * FROM job_postings WHERE id IS NOT NULL").fetchall()
         if not postings:
@@ -157,9 +142,6 @@ def match_new_jobs_for_user(user_id: int) -> dict:
         for job_row in postings:
             job = dict(job_row)
             if not job.get("id"):
-                continue
-
-            if not location_matches(job.get("location"), user_locations, remote_allowed):
                 continue
 
             score = calculate_dynamic_ats(resume_text, skills, target_titles, job)
@@ -190,7 +172,7 @@ def match_new_jobs_for_user(user_id: int) -> dict:
 def get_active_jobs_for_user(user_id: int):
     """
     Returns all jobs with computed scores sorted descending.
-    Defensively validates and casts every numeric key to prevent NoneType errors.
+    Guarantees integer 'id' is always provided.
     """
     with db_session() as conn:
         rows = conn.execute(
@@ -210,7 +192,7 @@ def get_active_jobs_for_user(user_id: int):
                LEFT JOIN user_job_decisions ujd ON jp.id = ujd.job_posting_id AND ujd.user_id = ?
                WHERE jp.id IS NOT NULL
                ORDER BY COALESCE(ujd.ats_score, ujd.base_ats_score, 0) DESC
-               LIMIT 150""",
+               LIMIT 200""",
             (user_id,)
         ).fetchall()
 
