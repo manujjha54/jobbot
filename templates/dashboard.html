@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JobBot | Dashboard</title>
+  <title>JobBot | Candidate Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
@@ -83,15 +83,16 @@
       gap: 16px;
     }
 
-    .nav-link {
-      color: var(--text-muted);
+    .admin-link {
+      color: var(--accent);
       text-decoration: none;
-      font-size: 0.9rem;
-      font-weight: 500;
-      transition: color 0.2s;
+      font-size: 0.88rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      background: rgba(6, 182, 212, 0.1);
+      border: 1px solid rgba(6, 182, 212, 0.25);
     }
-
-    .nav-link:hover { color: var(--text); }
 
     .btn-logout {
       background: rgba(255, 255, 255, 0.06);
@@ -99,13 +100,18 @@
       color: var(--text);
       padding: 6px 14px;
       border-radius: var(--radius-sm);
-      text-decoration: none;
       font-size: 0.85rem;
       font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-logout:hover {
+      background: rgba(255, 255, 255, 0.12);
     }
 
     .container {
-      max-width: 1200px;
+      max-width: 1100px;
       width: 100%;
       margin: 2rem auto;
       padding: 0 1.5rem;
@@ -121,25 +127,23 @@
       border-radius: var(--radius-lg);
       padding: 2rem;
       backdrop-filter: blur(16px);
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
     }
 
-    .card-title {
-      font-size: 1.3rem;
+    .card h2 {
+      font-size: 1.35rem;
       font-weight: 700;
       margin-bottom: 0.5rem;
     }
 
-    .card-desc {
+    .card p {
       color: var(--text-muted);
-      font-size: 0.9rem;
+      font-size: 0.92rem;
       margin-bottom: 1.5rem;
     }
 
     .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 20px;
+      padding: 11px 22px;
       background: var(--primary-gradient);
       border: none;
       border-radius: var(--radius-sm);
@@ -148,33 +152,75 @@
       font-weight: 600;
       cursor: pointer;
       box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
-      text-decoration: none;
+      transition: opacity 0.2s;
     }
 
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 1.25rem;
-    }
+    .btn-primary:hover { opacity: 0.92; }
 
-    .stat-card {
-      background: rgba(15, 23, 42, 0.6);
+    .btn-secondary {
+      padding: 10px 18px;
+      background: rgba(255, 255, 255, 0.06);
       border: 1px solid var(--card-border);
-      padding: 1.5rem;
       border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
     }
 
-    .stat-number {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 2rem;
-      font-weight: 700;
-      color: var(--accent);
-      margin-bottom: 4px;
+    .skills-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 1rem;
     }
 
-    .stat-label {
-      font-size: 0.85rem;
+    .skill-chip {
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: #c7d2fe;
+      padding: 5px 12px;
+      border-radius: 50px;
+      font-size: 0.82rem;
+      font-weight: 500;
+    }
+
+    .results-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1.5rem;
+    }
+
+    .results-table th, .results-table td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--card-border);
+      font-size: 0.9rem;
+    }
+
+    .results-table th {
       color: var(--text-muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .score-badge {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+      padding: 4px 10px;
+      border-radius: 50px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .status-msg {
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      margin-top: 1rem;
+      display: none;
     }
   </style>
 </head>
@@ -194,39 +240,180 @@
       </div>
     </a>
     <div class="nav-actions">
+      {% if is_admin %}
+        <a href="/admin" class="admin-link">⚙ Admin Panel</a>
+      {% endif %}
       <span style="font-size: 0.88rem; color: var(--text-muted);">{{ user_email if user_email else '' }}</span>
-      <form action="/api/logout" method="POST" style="margin: 0; display: inline;">
-  <button type="submit" class="btn-logout" style="cursor: pointer;">Sign Out</button>
-</form>
+      <button type="button" class="btn-logout" onclick="handleLogout()">Sign Out</button>
     </div>
   </header>
 
   <main class="container">
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-number">{{ stats.pool_count if stats else 0 }}</div>
-        <div class="stat-label">Jobs in Pool</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-number">{{ stats.applied_count if stats else 0 }}</div>
-        <div class="stat-label">Applications Sent</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-number">{{ stats.match_avg if stats else '0%' }}</div>
-        <div class="stat-label">Average Match Score</div>
+    <!-- Step 1: Resume Upload & Parser -->
+    <div class="card">
+      <h2>Step 1: Upload & Parse Resume</h2>
+      <p>Upload your latest DOCX or PDF resume to extract skills and tailor applications.</p>
+
+      <form id="resume-form" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+        <input type="file" id="resume-file" name="resume" accept=".pdf,.docx,.txt" required style="color: var(--text-muted); font-size: 0.9rem;">
+        <button type="submit" id="parse-btn" class="btn-primary">Parse Resume</button>
+      </form>
+
+      <div id="status-box" class="status-msg"></div>
+
+      <!-- Parsed Output Container -->
+      <div id="parsed-results" style="display: none; margin-top: 1.5rem; border-top: 1px solid var(--card-border); padding-top: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <h3 style="font-size: 1.1rem; color: var(--text);">Extracted Profile Details</h3>
+          <span id="exp-badge" style="font-size: 0.85rem; color: var(--accent); font-weight: 600;"></span>
+        </div>
+        <div id="parsed-title" style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 1rem;"></div>
+        <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Extracted Skills</h4>
+        <div id="skills-list" class="skills-container"></div>
       </div>
     </div>
 
-    <div class="card">
-      <h2 class="card-title">Resume & Profile Matching</h2>
-      <p class="card-desc">Upload your resume to extract key skills and search against open positions.</p>
+    <!-- Step 2: Search Matches -->
+    <div class="card" id="match-section" style="display: none;">
+      <h2>Step 2: Scored Job Matches</h2>
+      <p>Search open listings in the shared pool scored against your parsed skills.</p>
       
-      <form action="/api/parse_resume" method="POST" enctype="multipart/form-data" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-        <input type="file" name="resume" accept=".pdf,.docx,.txt" required style="color: var(--text-muted); font-size: 0.9rem;">
-        <button type="submit" class="btn-primary">Upload & Parse</button>
-      </form>
+      <button type="button" id="search-btn" class="btn-primary" onclick="searchJobs()">Score & Find Matching Jobs</button>
+
+      <div id="matches-output" style="display: none; margin-top: 1.5rem;">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>Company</th>
+              <th>Location</th>
+              <th>Score</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="matches-tbody"></tbody>
+        </table>
+      </div>
     </div>
   </main>
 
+  <script>
+    let activeResumeToken = null;
+
+    // Logout Handler
+    async function handleLogout() {
+      try {
+        await fetch('/api/logout', { method: 'POST' });
+      } catch (err) {
+        console.error('Logout error:', err);
+      } finally {
+        window.location.href = '/login';
+      }
+    }
+
+    // Resume Parsing Handler
+    document.getElementById('resume-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fileInput = document.getElementById('resume-file');
+      const parseBtn = document.getElementById('parse-btn');
+      const statusBox = document.getElementById('status-box');
+      
+      if (!fileInput.files.length) return;
+
+      const formData = new FormData();
+      formData.append('resume', fileInput.files[0]);
+
+      parseBtn.disabled = true;
+      parseBtn.innerText = 'Parsing Resume...';
+      statusBox.style.display = 'block';
+      statusBox.style.background = 'rgba(99, 102, 241, 0.15)';
+      statusBox.style.color = '#c7d2fe';
+      statusBox.innerText = 'Extracting skills and experience...';
+
+      try {
+        const res = await fetch('/api/parse_resume', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          activeResumeToken = data.resume_token;
+          statusBox.style.background = 'rgba(16, 185, 129, 0.15)';
+          statusBox.style.color = '#6ee7b7';
+          statusBox.innerText = `Successfully parsed ${data.resume_filename}!`;
+
+          // Display parsed skills & details
+          document.getElementById('exp-badge').innerText = `${data.suggested_years_experience || 0} Years Experience`;
+          document.getElementById('parsed-title').innerText = (data.suggested_titles || []).join(' | ');
+          
+          const skillsDiv = document.getElementById('skills-list');
+          skillsDiv.innerHTML = '';
+          (data.suggested_skills || []).forEach(skill => {
+            const chip = document.createElement('span');
+            chip.className = 'skill-chip';
+            chip.innerText = skill;
+            skillsDiv.appendChild(chip);
+          });
+
+          document.getElementById('parsed-results').style.display = 'block';
+          document.getElementById('match-section').style.display = 'block';
+        } else {
+          statusBox.style.background = 'rgba(239, 68, 68, 0.15)';
+          statusBox.style.color = '#fca5a5';
+          statusBox.innerText = data.error || 'Failed to parse resume.';
+        }
+      } catch (err) {
+        statusBox.style.background = 'rgba(239, 68, 68, 0.15)';
+        statusBox.style.color = '#fca5a5';
+        statusBox.innerText = 'Network error while parsing resume.';
+      } finally {
+        parseBtn.disabled = false;
+        parseBtn.innerText = 'Parse Resume';
+      }
+    });
+
+    // Search & Match Engine Handler
+    async function searchJobs() {
+      const searchBtn = document.getElementById('search-btn');
+      searchBtn.disabled = true;
+      searchBtn.innerText = 'Scoring Matches...';
+
+      try {
+        const res = await fetch('/api/search_jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ resume_token: activeResumeToken })
+        });
+        const data = await res.json();
+
+        const tbody = document.getElementById('matches-tbody');
+        tbody.innerHTML = '';
+
+        if (data.jobs && data.jobs.length > 0) {
+          data.jobs.forEach(job => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td style="font-weight: 600;">${job.title || 'Role'}</td>
+              <td style="color: var(--text-muted);">${job.company || 'Direct'}</td>
+              <td style="color: var(--text-muted);">${job.location || 'Remote'}</td>
+              <td><span class="score-badge">${job.score || '85'}% Match</span></td>
+              <td><a href="${job.url || '#'}" target="_blank" class="btn-secondary" style="text-decoration:none; display:inline-block; padding: 4px 10px; font-size: 0.8rem;">View Role</a></td>
+            `;
+            tbody.appendChild(row);
+          });
+          document.getElementById('matches-output').style.display = 'block';
+        } else {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--text-muted); padding: 1.5rem;">No matches in pool yet. Admin can refresh pool from /admin.</td></tr>`;
+          document.getElementById('matches-output').style.display = 'block';
+        }
+      } catch (err) {
+        alert('Error fetching job matches.');
+      } finally {
+        searchBtn.disabled = false;
+        searchBtn.innerText = 'Score & Find Matching Jobs';
+      }
+    }
+  </script>
 </body>
 </html>
