@@ -106,10 +106,6 @@
       transition: background 0.2s;
     }
 
-    .btn-logout:hover {
-      background: rgba(255, 255, 255, 0.12);
-    }
-
     .container {
       max-width: 1100px;
       width: 100%;
@@ -142,6 +138,21 @@
       margin-bottom: 1.5rem;
     }
 
+    .form-input {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--input-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    .form-input:focus {
+      border-color: var(--primary);
+    }
+
     .btn-primary {
       padding: 11px 22px;
       background: var(--primary-gradient);
@@ -152,27 +163,25 @@
       font-weight: 600;
       cursor: pointer;
       box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
-      transition: opacity 0.2s;
     }
 
-    .btn-primary:hover { opacity: 0.92; }
-
     .btn-secondary {
-      padding: 10px 18px;
+      padding: 8px 14px;
       background: rgba(255, 255, 255, 0.06);
       border: 1px solid var(--card-border);
       border-radius: var(--radius-sm);
       color: var(--text);
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       font-weight: 600;
       cursor: pointer;
+      text-decoration: none;
     }
 
     .skills-container {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-top: 1rem;
+      margin-top: 0.75rem;
     }
 
     .skill-chip {
@@ -192,7 +201,7 @@
     }
 
     .results-table th, .results-table td {
-      padding: 12px 16px;
+      padding: 14px 16px;
       text-align: left;
       border-bottom: 1px solid var(--card-border);
       font-size: 0.9rem;
@@ -249,10 +258,10 @@
   </header>
 
   <main class="container">
-    <!-- Step 1: Resume Upload & Parser -->
+    <!-- Step 1: Resume Upload & Parsing -->
     <div class="card">
-      <h2>Step 1: Upload & Parse Resume</h2>
-      <p>Upload your latest DOCX or PDF resume to extract skills and tailor applications.</p>
+      <h2>Step 1: Ingest Resume & Target Criteria</h2>
+      <p>Upload your resume to extract skills, experience, and target roles.</p>
 
       <form id="resume-form" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
         <input type="file" id="resume-file" name="resume" accept=".pdf,.docx,.txt" required style="color: var(--text-muted); font-size: 0.9rem;">
@@ -261,33 +270,38 @@
 
       <div id="status-box" class="status-msg"></div>
 
-      <!-- Parsed Output Container -->
+      <!-- Extracted Metadata Profile Form -->
       <div id="parsed-results" style="display: none; margin-top: 1.5rem; border-top: 1px solid var(--card-border); padding-top: 1.5rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-          <h3 style="font-size: 1.1rem; color: var(--text);">Extracted Profile Details</h3>
-          <span id="exp-badge" style="font-size: 0.85rem; color: var(--accent); font-weight: 600;"></span>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label style="font-size: 0.8rem; font-weight:600; color: #cbd5e1; display:block; margin-bottom: 4px;">Target Role Titles (Comma separated)</label>
+            <input type="text" id="target-titles" class="form-input" placeholder="e.g. Customer Success Manager, Implementation Lead">
+          </div>
+          <div>
+            <label style="font-size: 0.8rem; font-weight:600; color: #cbd5e1; display:block; margin-bottom: 4px;">Years of Experience</label>
+            <input type="number" id="years-exp" class="form-input" placeholder="10">
+          </div>
         </div>
-        <div id="parsed-title" style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 1rem;"></div>
-        <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Extracted Skills</h4>
+
+        <h4 style="font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Extracted Skills</h4>
         <div id="skills-list" class="skills-container"></div>
+
+        <button type="button" id="save-profile-btn" class="btn-primary" style="margin-top: 1.25rem;" onclick="saveAndScore()">Confirm Profile & Find Matches →</button>
       </div>
     </div>
 
-    <!-- Step 2: Search Matches -->
+    <!-- Step 2: Scored Job Matches Table -->
     <div class="card" id="match-section" style="display: none;">
       <h2>Step 2: Scored Job Matches</h2>
-      <p>Search open listings in the shared pool scored against your parsed skills.</p>
-      
-      <button type="button" id="search-btn" class="btn-primary" onclick="searchJobs()">Score & Find Matching Jobs</button>
+      <p id="match-summary-text">Open vacancies scored against your target titles & skills.</p>
 
-      <div id="matches-output" style="display: none; margin-top: 1.5rem;">
+      <div id="matches-output">
         <table class="results-table">
           <thead>
             <tr>
-              <th>Role</th>
-              <th>Company</th>
+              <th>Role & Company</th>
               <th>Location</th>
-              <th>Score</th>
+              <th>Match Score</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -299,6 +313,7 @@
 
   <script>
     let activeResumeToken = null;
+    let extractedSkills = [];
 
     // Logout Handler
     async function handleLogout() {
@@ -311,7 +326,7 @@
       }
     }
 
-    // Resume Parsing Handler
+    // Step 1: Parse Resume
     document.getElementById('resume-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const fileInput = document.getElementById('resume-file');
@@ -328,28 +343,26 @@
       statusBox.style.display = 'block';
       statusBox.style.background = 'rgba(99, 102, 241, 0.15)';
       statusBox.style.color = '#c7d2fe';
-      statusBox.innerText = 'Extracting skills and experience...';
+      statusBox.innerText = 'Extracting skills and profile metadata...';
 
       try {
-        const res = await fetch('/api/parse_resume', {
-          method: 'POST',
-          body: formData
-        });
+        const res = await fetch('/api/parse_resume', { method: 'POST', body: formData });
         const data = await res.json();
 
         if (res.ok) {
           activeResumeToken = data.resume_token;
+          extractedSkills = data.suggested_skills || [];
+          
           statusBox.style.background = 'rgba(16, 185, 129, 0.15)';
           statusBox.style.color = '#6ee7b7';
           statusBox.innerText = `Successfully parsed ${data.resume_filename}!`;
 
-          // Display parsed skills & details
-          document.getElementById('exp-badge').innerText = `${data.suggested_years_experience || 0} Years Experience`;
-          document.getElementById('parsed-title').innerText = (data.suggested_titles || []).join(' | ');
+          document.getElementById('target-titles').value = (data.suggested_titles || []).join(', ');
+          document.getElementById('years-exp').value = data.suggested_years_experience || 0;
           
           const skillsDiv = document.getElementById('skills-list');
           skillsDiv.innerHTML = '';
-          (data.suggested_skills || []).forEach(skill => {
+          extractedSkills.forEach(skill => {
             const chip = document.createElement('span');
             chip.className = 'skill-chip';
             chip.innerText = skill;
@@ -357,7 +370,6 @@
           });
 
           document.getElementById('parsed-results').style.display = 'block';
-          document.getElementById('match-section').style.display = 'block';
         } else {
           statusBox.style.background = 'rgba(239, 68, 68, 0.15)';
           statusBox.style.color = '#fca5a5';
@@ -373,45 +385,79 @@
       }
     });
 
-    // Search & Match Engine Handler
-    async function searchJobs() {
-      const searchBtn = document.getElementById('search-btn');
-      searchBtn.disabled = true;
-      searchBtn.innerText = 'Scoring Matches...';
+    // Step 2: Save Profile & Search Matches
+    async function saveAndScore() {
+      const btn = document.getElementById('save-profile-btn');
+      const targetTitlesRaw = document.getElementById('target-titles').value;
+      const targetTitles = targetTitlesRaw.split(',').map(t => t.trim()).filter(Boolean);
+      const yearsExp = parseInt(document.getElementById('years-exp').value, 10) || 0;
+
+      if (!targetTitles.length) {
+        alert('Please specify at least one target title (e.g. Customer Success, Implementation).');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = 'Scoring Candidate Matches...';
 
       try {
-        const res = await fetch('/api/search', {
+        // 1. Save profile to DB
+        const saveRes = await fetch('/api/save_profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ resume_token: activeResumeToken })
+          body: JSON.stringify({
+            resume_token: activeResumeToken,
+            target_titles: targetTitles,
+            must_have_skills: extractedSkills.slice(0, 15),
+            years_experience: yearsExp,
+            ats_min_score: 50
+          })
         });
-        const data = await res.json();
+
+        if (!saveRes.ok) {
+          const errData = await saveRes.json();
+          alert(errData.error || 'Could not save profile criteria.');
+          return;
+        }
+
+        // 2. Query match engine
+        const matchRes = await fetch('/api/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        const matchData = await matchRes.json();
 
         const tbody = document.getElementById('matches-tbody');
         tbody.innerHTML = '';
+        document.getElementById('match-section').style.display = 'block';
 
-        if (data.jobs && data.jobs.length > 0) {
-          data.jobs.forEach(job => {
+        if (matchData.jobs && matchData.jobs.length > 0) {
+          document.getElementById('match-summary-text').innerText = `Considered ${matchData.considered || matchData.jobs.length} jobs in pool — ${matchData.jobs.length} matched above ATS threshold.`;
+          
+          matchData.jobs.forEach(job => {
             const row = document.createElement('tr');
             row.innerHTML = `
-              <td style="font-weight: 600;">${job.title || 'Role'}</td>
-              <td style="color: var(--text-muted);">${job.company || 'Direct'}</td>
+              <td>
+                <div style="font-weight: 700; color: var(--text);">${job.title || 'Role'}</div>
+                <div style="font-size: 0.82rem; color: var(--text-muted);">${job.company || 'Direct'}</div>
+              </td>
               <td style="color: var(--text-muted);">${job.location || 'Remote'}</td>
-              <td><span class="score-badge">${job.score || '85'}% Match</span></td>
-              <td><a href="${job.url || '#'}" target="_blank" class="btn-secondary" style="text-decoration:none; display:inline-block; padding: 4px 10px; font-size: 0.8rem;">View Role</a></td>
+              <td><span class="score-badge">${job.ats_score || job.base_ats_score || 85}% ATS Match</span></td>
+              <td>
+                <a href="${job.url || '#'}" target="_blank" class="btn-secondary" style="margin-right: 6px;">View Role ↗</a>
+              </td>
             `;
             tbody.appendChild(row);
           });
-          document.getElementById('matches-output').style.display = 'block';
         } else {
-          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--text-muted); padding: 1.5rem;">No matches in pool yet. Admin can refresh pool from /admin.</td></tr>`;
-          document.getElementById('matches-output').style.display = 'block';
+          tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color: var(--text-muted); padding: 2rem;">No matching jobs found with current target titles. Try broadening the target role titles above.</td></tr>`;
         }
       } catch (err) {
-        alert('Error fetching job matches.');
+        alert('Failed to score and fetch jobs.');
       } finally {
-        searchBtn.disabled = false;
-        searchBtn.innerText = 'Score & Find Matching Jobs';
+        btn.disabled = false;
+        btn.innerText = 'Confirm Profile & Find Matches →';
       }
     }
   </script>
