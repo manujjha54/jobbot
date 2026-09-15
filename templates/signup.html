@@ -3,69 +3,70 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sign up — Job Search Console</title>
+<title>jobbot — Smarter resumes. Faster applications.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink: #16243F; --indigo: #4F46E5; --violet: #7C3AED; --brass: #B37B2E;
-    --paper: #F6F5F1; --panel: #FFFFFF; --line: #DAD5C8; --muted: #6E6A5E; --reject: #8C3B32;
+    --ink: #1B1240; --indigo: #4F46E5; --violet: #7C3AED; --pink: #EC4899;
+    --paper: #F7F6FD; --panel: #FFFFFF; --line: #E5E1F7; --muted: #6B6478;
+    --reject: #EF4444; --reject-bg: #FEF2F2;
   }
   * { box-sizing: border-box; }
   body {
-    font-family: 'Inter', -apple-system, sans-serif; background: var(--paper); color: var(--ink);
-    display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0;
+    font-family: 'Inter', -apple-system, sans-serif; color: var(--ink); margin: 0; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 55%, #A855F7 100%);
+    background-attachment: fixed;
   }
   .card {
-    background: var(--panel); border: 1px solid var(--line); width: 380px; padding: 36px 36px 32px;
-    position: relative;
+    background: var(--panel); border-radius: 20px; width: 400px; padding: 40px 38px 34px;
+    box-shadow: 0 24px 60px rgba(20, 10, 60, 0.35);
   }
-  .card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, var(--indigo), var(--violet));
+  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+  .logo-badge {
+    width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--indigo), var(--violet));
+    display: flex; align-items: center; justify-content: center;
   }
-  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 26px; }
-  .wordmark { font-family: 'Source Serif 4', serif; font-size: 20px; font-weight: 700; color: var(--ink); line-height: 1.1; }
-  .tagline { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
-  h1 {
-    font-family: 'Source Serif 4', serif; font-size: 17px; font-weight: 600; margin: 0 0 22px;
-    letter-spacing: -0.01em; color: var(--ink);
-  }
+  .wordmark { font-family: 'Source Serif 4', serif; font-size: 21px; font-weight: 700; color: var(--ink); line-height: 1.1; }
+  .tagline { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  h1 { font-family: 'Inter', sans-serif; font-size: 18px; font-weight: 700; margin: 0 0 22px; color: var(--ink); }
   label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; color: var(--ink); }
   input {
-    width: 100%; padding: 10px 12px; border: 1px solid var(--line); background: var(--paper);
-    font-size: 14px; font-family: inherit; margin-bottom: 16px; color: var(--ink);
+    width: 100%; padding: 11px 13px; border: 1.5px solid var(--line); border-radius: 10px;
+    font-size: 14px; font-family: inherit; margin-bottom: 16px; color: var(--ink); background: var(--paper);
+    transition: border-color 0.15s;
   }
-  input:focus { outline: 2px solid var(--indigo); outline-offset: -1px; background: white; }
+  input:focus { outline: none; border-color: var(--indigo); background: white; }
   .hint { font-size: 12px; color: var(--muted); margin: -10px 0 16px; }
   button {
-    width: 100%; background: var(--ink); color: white; border: none; padding: 12px;
-    font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+    width: 100%; color: white; border: none; padding: 13px; border-radius: 10px;
+    font-size: 14.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+    background: linear-gradient(135deg, var(--indigo), var(--violet));
+    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.35);
+    transition: transform 0.15s, box-shadow 0.15s;
   }
-  button:hover { background: #0E1929; }
+  button:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(79, 70, 229, 0.45); }
   .error {
     color: var(--reject); font-size: 13px; margin-bottom: 14px; display: none;
-    padding: 8px 10px; background: #FBF0EE; border-left: 2px solid var(--reject);
+    padding: 9px 12px; background: var(--reject-bg); border-radius: 8px; font-weight: 500;
   }
-  .footer-link { text-align: center; font-size: 13px; margin-top: 20px; color: var(--muted); }
-  .footer-link a { color: var(--indigo); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+  .footer-link { text-align: center; font-size: 13px; margin-top: 22px; color: var(--muted); }
+  .footer-link a { color: var(--indigo); font-weight: 700; text-decoration: none; }
+  .footer-link a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
 <div class="card">
   <div class="brand">
-    <svg width="38" height="38" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="36" height="36" rx="9" fill="url(#logoGrad)"/>
-      <path d="M12 9h8l4 4v13a1 1 0 0 1-1 1H12a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1z" fill="white"/>
-      <path d="M20 9l4 4h-4z" fill="#D7D3FF"/>
-      <path d="M14.5 19.5l3 3 6-6" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <defs>
-        <linearGradient id="logoGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
-          <stop stop-color="#4F46E5"/>
-          <stop offset="1" stop-color="#7C3AED"/>
-        </linearGradient>
-      </defs>
-    </svg>
+    <div class="logo-badge">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M8 5h8l4 4v10a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" fill="white"/>
+        <path d="M16 5l4 4h-4z" fill="#D7D3FF"/>
+        <path d="M10 13l2.5 2.5 4.5-4.5" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
     <div>
       <div class="wordmark">jobbot</div>
       <div class="tagline">Smarter resumes. Faster applications. Zero hassle.</div>

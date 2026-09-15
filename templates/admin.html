@@ -5,39 +5,52 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>jobbot — Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink: #16243F; --indigo: #4F46E5; --violet: #7C3AED; --brass: #B37B2E; --brass-dark: #8F6221;
-    --paper: #F6F5F1; --panel: #FFFFFF;
-    --line: #DAD5C8; --muted: #6E6A5E; --approve: #3A6B4A; --approve-bg: #EDF3EE;
-    --reject: #8C3B32; --reject-bg: #FBEFEC;
+    --ink: #1B1240; --indigo: #4F46E5; --violet: #7C3AED; --pink: #EC4899;
+    --paper: #F7F6FD; --panel: #FFFFFF; --line: #E5E1F7; --muted: #6B6478;
+    --approve: #10B981; --approve-bg: #ECFDF5; --reject: #EF4444; --reject-bg: #FEF2F2;
   }
   * { box-sizing: border-box; }
   body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; background: var(--paper); color: var(--ink); }
-  h1, h2 { font-family: 'Source Serif 4', serif; font-weight: 600; }
-  header { background: var(--ink); color: white; padding: 20px 32px; display:flex; justify-content:space-between; align-items:center; }
-  .brand { display: flex; align-items: center; gap: 10px; }
-  header h1 { font-size: 19px; margin: 0; font-weight: 600; }
-  header a { color: white; font-size: 13px; text-decoration: none; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 1px; }
-  main { max-width: 1080px; margin: 0 auto; padding: 30px 32px 80px; }
-  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin-bottom: 20px; background: var(--line); border: 1px solid var(--line); }
-  .stat { background: var(--panel); padding: 16px; }
-  .stat .num { font-family: 'Source Serif 4', serif; font-size: 26px; font-weight: 700; }
-  .stat .label { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
-  .panel { background: var(--panel); border: 1px solid var(--line); padding: 20px 22px; margin-bottom: 16px; }
+  h1, h2 { font-family: 'Source Serif 4', serif; font-weight: 700; }
+  header {
+    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 65%, #9333EA 100%);
+    color: white; padding: 22px 32px; display:flex; justify-content:space-between; align-items:center;
+  }
+  .brand { display: flex; align-items: center; gap: 11px; }
+  .logo-badge { width: 34px; height: 34px; border-radius: 10px; background: white; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(0,0,0,0.15); }
+  header h1 { font-size: 19px; margin: 0; font-weight: 700; }
+  header a { color: white; font-size: 13px; text-decoration: none; font-weight: 700; }
+  header a:hover { text-decoration: underline; }
+  main { max-width: 1080px; margin: 0 auto; padding: 32px 32px 80px; }
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: 0 2px 10px rgba(80,60,180,0.04); }
+  .stat .icon-dot { width: 28px; height: 28px; border-radius: 8px; display:flex; align-items:center; justify-content:center; margin-bottom: 8px; font-size: 14px; }
+  .stat:nth-child(1) .icon-dot { background: #EEF0FF; color: var(--indigo); }
+  .stat:nth-child(2) .icon-dot { background: var(--approve-bg); color: var(--approve); }
+  .stat:nth-child(3) .icon-dot { background: #FCE7F3; color: var(--pink); }
+  .stat:nth-child(4) .icon-dot { background: var(--reject-bg); color: var(--reject); }
+  .stat .num { font-family: 'Source Serif 4', serif; font-size: 25px; font-weight: 700; }
+  .stat .label { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 22px 24px; margin-bottom: 16px; box-shadow: 0 2px 10px rgba(80,60,180,0.04); }
   .panel h2 { font-size: 16px; margin: 0 0 12px; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  th, td { text-align: left; padding: 10px 11px; border-bottom: 1px solid var(--line); }
   th { color: var(--muted); font-weight: 600; font-size: 11.5px; }
   tr:last-child td { border-bottom: none; }
   tr.user-row { cursor: pointer; }
-  tr.user-row:hover { background: #FBFAF7; }
-  .badge { padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 700; }
+  tr.user-row:hover { background: #FAF9FF; }
+  .badge { padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; }
   .badge.ok { background: var(--approve-bg); color: var(--approve); }
   .badge.bad { background: var(--reject-bg); color: var(--reject); }
-  button.primary { background: var(--ink); color: white; border: none; padding: 9px 16px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; }
-  button.primary:hover { background: #0E1929; }
+  button.primary {
+    color: white; border: none; padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 700;
+    cursor: pointer; font-family: 'Inter', sans-serif; background: linear-gradient(135deg, var(--indigo), var(--violet));
+    box-shadow: 0 6px 16px rgba(79,70,229,0.3); transition: transform 0.15s;
+  }
+  button.primary:hover { transform: translateY(-1px); }
   .meta-line { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
   #userDetail { display: none; }
 </style>
@@ -45,18 +58,13 @@
 <body>
 <header>
   <div class="brand">
-    <svg width="30" height="30" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="36" height="36" rx="9" fill="url(#logoGrad)"/>
-      <path d="M12 9h8l4 4v13a1 1 0 0 1-1 1H12a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1z" fill="white"/>
-      <path d="M20 9l4 4h-4z" fill="#D7D3FF"/>
-      <path d="M14.5 19.5l3 3 6-6" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <defs>
-        <linearGradient id="logoGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
-          <stop stop-color="#4F46E5"/>
-          <stop offset="1" stop-color="#7C3AED"/>
-        </linearGradient>
-      </defs>
-    </svg>
+    <div class="logo-badge">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <path d="M8 5h8l4 4v10a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" fill="#4F46E5"/>
+        <path d="M16 5l4 4h-4z" fill="#A5B4FC"/>
+        <path d="M10 13l2.5 2.5 4.5-4.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
     <h1>jobbot — Admin</h1>
   </div>
   <a href="/">&larr; Back to dashboard</a>
@@ -99,7 +107,7 @@ async function loadOverview() {
     ['Users', s.user_count], ['Applications sent', s.total_applications],
     ['Emails sent', s.emails_sent], ['Email failures', s.email_failures],
   ];
-  $('#statsRow').innerHTML = stats.map(([label, num]) => `<div class="stat"><div class="num">${num}</div><div class="label">${label}</div></div>`).join('');
+  $('#statsRow').innerHTML = stats.map(([label, num]) => `<div class="stat"><div class="icon-dot">●</div><div class="num">${num}</div><div class="label">${label}</div></div>`).join('');
   $('#poolMeta').textContent = `${s.job_pool_size} postings in the shared pool` +
     (s.last_refresh ? `, last refresh: ${s.last_refresh.finished_at || 'in progress'} (${s.last_refresh.new_count ?? 0} new)` : ', never refreshed yet');
 }
