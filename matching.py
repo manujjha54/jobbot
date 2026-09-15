@@ -1,104 +1,96 @@
-"""
-matching.py
-Scores the SHARED job pool against ONE user's profile. This is the part
-that runs per-user (cheap - pure Python scoring, no external API calls),
-as opposed to job_pool.py's refresh which is shared/expensive and runs
-independently of how many users exist.
-"""
-
+import re
 import json
+import math
+from collections import Counter
 from db import db_session, json_loads_safe
-from match_engine import filter_and_rank
-import profile_builder
+import resume_tailor
 
-
-def _profile_row_to_dict(profile_row):
-    """Converts a DB profile row into the dict shape match_engine/ats_score expect."""
-    return profile_builder.build_profile(
-        resume_filename=profile_row["resume_filename"] or "",
-        name="", email="", phone=profile_row["phone"] or "",
-        linkedin=profile_row["linkedin"] or "", location=profile_row["location"] or "",
-        target_titles=json_loads_safe(profile_row["target_titles"]),
-        must_have_skills=json_loads_safe(profile_row["must_have_skills"]),
-        nice_to_have_skills=json_loads_safe(profile_row["nice_to_have_skills"]),
-        years_experience=profile_row["years_experience"],
-        remote_first=bool(profile_row["remote_first"]),
-        acceptable_locations=json_loads_safe(profile_row["acceptable_locations"]),
-    )
-
-
-def get_user_profile_dict(user_id):
-    with db_session() as conn:
-        row = conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone()
-    if not row:
-        return None
-    return _profile_row_to_dict(row)
-
-
-def match_new_jobs_for_user(user_id, threshold=0.55):
+def calculate_ats_score(resume_text: str, job_title: str, job_desc: str, candidate_skills: list = None) -> int:
     """
-    Finds job_postings this user hasn't seen yet (no existing decision row),
-    scores them against their profile, and creates decision rows (decision
-    defaulting to 'skip') for anything that clears the threshold. Returns
-    how many postings were considered and how many matched.
+    Calculates dynamic ATS score (0-100%) based on:
+    1. Title alignment (35%)
+    2. Skill & keyword frequency/overlap (45%)
+    3. Content density & term matching (20%)
     """
+    if not resume_text or not (job_title or job_desc):
+        return 50
+
+    resume_text_lower = resume_text.lower()
+    job_full_text = f"{job_title} {job_desc or ''}".lower()
+
+    # 1. Title Similarity (35 pts)
+    title_score = 0.0
+    job_title_words = [w for w in re.findall(r"\b[a-z]{3,}\b", job_title.lower()) if w not in ("and", "the", "for", "with")]
+    if job_title_words:
+        matched_title_words = sum(1 for w in job_title_words if w in resume_text_lower)
+        title_score = (matched_title_words / len(job_title_words)) * 35.0
+
+    # 2. Skill Overlap (45 pts)
+    skill_score = 0.0
+    if candidate_skills:
+        matched_skills = sum(1 for s in candidate_skills if s.lower() in job_full_text)
+        total_skills = len(candidate_skills) if len(candidate_skills) > 0 else 1
+        skill_score = min(1.0, matched_skills / min(total_skills, 12)) * 45.0
+    else:
+        # Fallback to key industry terms in job
+        key_terms = set(re.findall(r"\b[a-z]{4,}\b", job_full_text)) - {"with", "that", "this", "from", "have", "will", "your", "about"}
+        if key_terms:
+            matched_terms = sum(1 for t in key_terms if t in resume_text_lower)
+            skill_score = (matched_terms / len(key_terms)) * 45.0
+
+    # 3. Density / Keyword Frequency (20 pts)
+    job_words = re.findall(r"\b[a-z]{3,}\b", job_full_text)
+    job_freq = Counter(job_words)
+    top_keywords = [word for word, _ in job_freq.most_common(20) if word not in ("the", "and", "you", "are", "our", "for", "with", "will")]
+    
+    if top_keywords:
+        top_matches = sum(1 for kw in top_keywords if kw in resume_text_lower)
+        density_score = (top_matches / len(top_keywords)) * 20.0
+    else:
+        density_score = 10.0
+
+    total_score = int(round(title_score + skill_score + density_score))
+    return max(15, min(total_score, 98))
+
+
+def match_new_jobs_for_user(user_id: int) -> dict:
     with db_session() as conn:
-        profile_row = conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone()
-        if not profile_row or not profile_row["setup_complete"]:
-            return {"considered": 0, "matched": 0, "error": "Profile setup not complete."}
+        profile = conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone()
+        if not profile or not profile["resume_blob"]:
+            return {"error": "Upload a resume first.", "considered": 0, "matched": 0}
 
-        profile = _profile_row_to_dict(profile_row)
+        resume_text = resume_tailor.extract_resume_text(profile["resume_blob"])
+        skills = json_loads_safe(profile["must_have_skills"]) or []
+        target_titles = json_loads_safe(profile["target_titles"]) or []
+        
+        postings = conn.execute("SELECT * FROM job_postings").fetchall()
 
-        unseen = conn.execute(
-            """SELECT jp.* FROM job_postings jp
-               WHERE jp.id NOT IN (
-                   SELECT job_posting_id FROM user_job_decisions WHERE user_id = ?
-               )""",
-            (user_id,),
-        ).fetchall()
+        matched_count = 0
+        for job in postings:
+            # Calculate unique dynamic score per job
+            score = calculate_ats_score(resume_text, job["title"], job["description"], skills)
 
-        jobs = [{
-            "id": r["id"], "source": r["source"], "title": r["title"], "company": r["company"],
-            "location": r["location"], "remote": bool(r["remote"]), "url": r["url"],
-            "description": r["description"], "posted_date": r["posted_date"],
-            "apply_email": r["apply_email"],
-        } for r in unseen]
-
-        matched = filter_and_rank(jobs, profile, threshold=threshold)
-
-        for job in matched:
             conn.execute(
-                """INSERT OR IGNORE INTO user_job_decisions
-                   (user_id, job_posting_id, decision, match_score, match_reasons)
-                   VALUES (?, ?, 'skip', ?, ?)""",
-                (user_id, job["id"], job["match_score"], json.dumps(job.get("match_reasons", []))),
+                """INSERT INTO user_job_decisions 
+                   (user_id, job_posting_id, base_ats_score, ats_score, decision)
+                   VALUES (?, ?, ?, ?, 'undecided')
+                   ON CONFLICT(user_id, job_posting_id) DO UPDATE SET
+                   base_ats_score = ?, ats_score = COALESCE(ats_score, ?)""",
+                (user_id, job["id"], score, score, score, score)
             )
-        # Also record "considered but not matched" as nothing - we don't
-        # want to re-score them every time, so mark them seen with a
-        # rejected-by-score sentinel decision that never shows in the UI.
-        matched_ids = {j["id"] for j in matched}
-        for job in jobs:
-            if job["id"] not in matched_ids:
-                conn.execute(
-                    """INSERT OR IGNORE INTO user_job_decisions
-                       (user_id, job_posting_id, decision, match_score)
-                       VALUES (?, ?, 'below_threshold', 0)""",
-                    (user_id, job["id"]),
-                )
+            matched_count += 1
 
-    return {"considered": len(jobs), "matched": len(matched)}
+    return {"considered": len(postings), "matched": matched_count}
 
 
-def get_active_jobs_for_user(user_id):
-    """Jobs still needing a decision or awaiting apply (excludes below_threshold, applied)."""
+def get_active_jobs_for_user(user_id: int):
     with db_session() as conn:
         rows = conn.execute(
-            """SELECT ujd.*, jp.title, jp.company, jp.location, jp.remote, jp.url,
-                      jp.description, jp.source, jp.apply_email
-               FROM user_job_decisions ujd
-               JOIN job_postings jp ON jp.id = ujd.job_posting_id
-               WHERE ujd.user_id = ? AND ujd.applied = 0 AND ujd.decision != 'below_threshold'
-               ORDER BY ujd.match_score DESC""",
-            (user_id,),
+            """SELECT jp.*, ujd.id as decision_id, ujd.base_ats_score, ujd.ats_score, ujd.was_tailored, ujd.decision
+               FROM job_postings jp
+               JOIN user_job_decisions ujd ON jp.id = ujd.job_posting_id
+               WHERE ujd.user_id = ?
+               ORDER BY COALESCE(ujd.ats_score, ujd.base_ats_score) DESC""",
+            (user_id,)
         ).fetchall()
-    return [dict(r) for r in rows]
+        return [dict(r) for r in rows]
