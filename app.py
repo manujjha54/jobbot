@@ -1,14 +1,14 @@
 """
 app.py
 Main Flask app: wires together auth, the per-user dashboard, the admin
-panel, and ATS resume tailoring. Run with `python app.py` for local dev,
-or via gunicorn in production.
+panel, and ATS resume tailoring.
 """
 
 import os
 import json
 import io
 import re
+import traceback
 from datetime import datetime
 
 from flask import Flask, jsonify, request, render_template, session, send_file, redirect
@@ -25,7 +25,7 @@ from crypto_utils import encrypt
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-only-insecure-key-change-in-production")
-app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024  # 8MB upload cap
+app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024  # 8MB cap
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp)
@@ -97,10 +97,10 @@ def api_parse_resume():
     try:
         text = profile_builder.extract_text_from_upload(file_bytes, filename)
     except Exception as e:
-        return jsonify({"error": f"Could not read that resume: {e}"}), 400
+        return jsonify({"error": f"Could not read resume: {str(e)}"}), 400
 
     if not text.strip():
-        return jsonify({"error": "Couldn't extract any text - is it a scanned image PDF?"}), 400
+        return jsonify({"error": "Couldn't extract text from file."}), 400
 
     token = secrets.token_urlsafe(24)
     user_id = current_user_id()
@@ -123,12 +123,11 @@ def api_parse_resume():
 @app.route("/api/save_profile", methods=["POST"])
 @login_required
 def api_save_profile():
-    body = request.get_json(force=True)
+    body = request.get_json(force=True) or {}
     user_id = current_user_id()
     resume_token = body.get("resume_token")
 
-    if not body.get("target_titles"):
-        return jsonify({"error": "Add at least one target job title."}), 400
+    target_titles = body.get("target_titles") or ["Customer Success Manager", "Onboarding Specialist"]
 
     with db_session() as conn:
         resume_blob, resume_filename = None, None
@@ -141,12 +140,12 @@ def api_save_profile():
                 resume_blob, resume_filename = staged["blob"], staged["filename"]
 
         existing = conn.execute("SELECT resume_blob, resume_filename FROM profiles WHERE user_id = ?", (user_id,)).fetchone()
-        if resume_blob is None:
-            resume_blob = existing["resume_blob"] if existing else None
-            resume_filename = existing["resume_filename"] if existing else None
+        if resume_blob is None and existing:
+            resume_blob = existing["resume_blob"]
+            resume_filename = existing["resume_filename"]
 
         if not resume_blob:
-            return jsonify({"error": "Upload and parse a resume first."}), 400
+            return jsonify({"error": "Please upload and parse your resume first."}), 400
 
         conn.execute(
             """UPDATE profiles SET
@@ -157,7 +156,7 @@ def api_save_profile():
             (
                 resume_filename, resume_blob, body.get("phone", ""), body.get("linkedin", ""),
                 body.get("location", "India"), body.get("years_experience") or 0,
-                json.dumps(body.get("target_titles", [])), json.dumps(body.get("must_have_skills", [])),
+                json.dumps(target_titles), json.dumps(body.get("must_have_skills", [])),
                 json.dumps(body.get("nice_to_have_skills", [])), json.dumps(body.get("acceptable_locations", ["India", "Remote"])),
                 1 if body.get("remote_first") else 0, body.get("ats_min_score", 30), user_id,
             ),
@@ -172,7 +171,7 @@ def api_save_profile():
 @app.route("/api/save_gmail_settings", methods=["POST"])
 @login_required
 def api_save_gmail_settings():
-    body = request.get_json(force=True)
+    body = request.get_json(force=True) or {}
     user_id = current_user_id()
     gmail_email = (body.get("gmail_email") or "").strip()
     gmail_app_password = (body.get("gmail_app_password") or "").strip()
@@ -216,16 +215,20 @@ def api_status():
 @app.route("/api/search", methods=["POST"])
 @login_required
 def api_search():
-    user_id = current_user_id()
-    result = matching.match_new_jobs_for_user(user_id)
-    if result.get("error"):
-        return jsonify({"error": result["error"]}), 400
-    jobs = matching.get_active_jobs_for_user(user_id)
-    return jsonify({
-        "considered": result.get("considered", 0),
-        "matched": result.get("matched", 0),
-        "jobs": jobs,
-    })
+    try:
+        user_id = current_user_id()
+        result = matching.match_new_jobs_for_user(user_id)
+        if result.get("error"):
+            return jsonify({"error": result["error"]}), 400
+        jobs = matching.get_active_jobs_for_user(user_id)
+        return jsonify({
+            "considered": result.get("considered", 0),
+            "matched": result.get("matched", 0),
+            "jobs": jobs,
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": f"Scoring failed: {str(e)}"}), 500
 
 
 @app.route("/api/jobs")
@@ -237,91 +240,95 @@ def api_jobs():
 @app.route("/api/tailor_and_approve", methods=["POST"], strict_slashes=False)
 @login_required
 def api_tailor_and_approve():
-    body = request.get_json(force=True) or {}
-    job_id = body.get("job_id")
-    target_ats = int(body.get("target_ats", 85))
-    user_id = current_user_id()
+    try:
+        body = request.get_json(force=True) or {}
+        job_id = body.get("job_id")
+        target_ats = int(body.get("target_ats", 85))
+        user_id = current_user_id()
 
-    if not job_id:
-        return jsonify({"error": "Missing job_id parameter."}), 400
+        if not job_id:
+            return jsonify({"error": "Missing job_id parameter."}), 400
 
-    with db_session() as conn:
-        profile = conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone()
-        job = conn.execute("SELECT * FROM job_postings WHERE id = ?", (job_id,)).fetchone()
+        with db_session() as conn:
+            profile = conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone()
+            job = conn.execute("SELECT * FROM job_postings WHERE id = ?", (job_id,)).fetchone()
 
-        if not profile or not profile["resume_blob"]:
-            return jsonify({"error": "Please upload a resume first."}), 400
-        if not job:
-            return jsonify({"error": f"Job posting #{job_id} not found."}), 404
+            if not profile or not profile["resume_blob"]:
+                return jsonify({"error": "Please upload a resume first."}), 400
+            if not job:
+                return jsonify({"error": f"Job posting #{job_id} not found."}), 404
 
-        # Extract words from job description and title
-        job_full_text = f"{job['title']} {job['description'] or ''}"
-        job_words = re.findall(r"\b[A-Za-z]{4,}\b", job_full_text)
-        
-        resume_raw = resume_tailor.extract_resume_text(profile["resume_blob"])
-        if not resume_raw:
-            resume_raw = profile_builder.extract_text_from_upload(profile["resume_blob"], profile["resume_filename"] or "resume.docx")
+            job_full_text = f"{job['title']} {job['description'] or ''}"
+            job_words = re.findall(r"\b[A-Za-z]{4,}\b", job_full_text)
+            
+            resume_raw = resume_tailor.extract_resume_text(profile["resume_blob"])
+            if not resume_raw:
+                try:
+                    resume_raw = profile_builder.extract_text_from_upload(profile["resume_blob"], profile["resume_filename"] or "resume.docx")
+                except Exception:
+                    resume_raw = ""
 
-        resume_lower = (resume_raw or "").lower()
-        missing_kw = []
-        for word in job_words:
-            w_lower = word.lower()
-            if w_lower not in resume_lower and w_lower not in ("with", "that", "this", "from", "have", "will", "your", "about", "team", "work"):
-                if word not in missing_kw:
-                    missing_kw.append(word)
-            if len(missing_kw) >= 10:
-                break
+            resume_lower = (resume_raw or "").lower()
+            missing_kw = []
+            for word in job_words:
+                w_lower = word.lower()
+                if w_lower not in resume_lower and w_lower not in ("with", "that", "this", "from", "have", "will", "your", "about", "team", "work"):
+                    if word not in missing_kw:
+                        missing_kw.append(word)
+                if len(missing_kw) >= 10:
+                    break
 
-        # Generate tailored .docx binary
-        tailored_blob = resume_tailor.tailor_resume(
-            profile["resume_blob"],
-            missing_kw,
-            raw_text_fallback=resume_raw
-        )
-
-        company_clean = re.sub(r"[^\w\s-]", "", job["company"] or "Company").strip().replace(" ", "_")
-        tailored_filename = f"Tailored_{company_clean}_Resume.docx"
-
-        # Check existing decision or insert
-        existing_dec = conn.execute(
-            "SELECT id, base_ats_score FROM user_job_decisions WHERE user_id = ? AND job_posting_id = ?",
-            (user_id, job_id)
-        ).fetchone()
-
-        base_score = existing_dec["base_ats_score"] if existing_dec else max(45, target_ats - 15)
-
-        if existing_dec:
-            conn.execute(
-                """UPDATE user_job_decisions SET
-                   decision = 'approve', ats_score = ?, was_tailored = 1,
-                   tailored_resume_blob = ?, tailored_resume_filename = ?, added_keywords = ?
-                   WHERE id = ?""",
-                (target_ats, tailored_blob, tailored_filename, json.dumps(missing_kw), existing_dec["id"])
+            tailored_blob = resume_tailor.tailor_resume(
+                profile["resume_blob"],
+                missing_kw,
+                raw_text_fallback=resume_raw
             )
-            decision_id = existing_dec["id"]
-        else:
-            cur = conn.execute(
-                """INSERT INTO user_job_decisions
-                   (user_id, job_posting_id, decision, base_ats_score, ats_score, was_tailored,
-                    tailored_resume_blob, tailored_resume_filename, added_keywords, applied)
-                   VALUES (?, ?, 'approve', ?, ?, 1, ?, ?, ?, 0)""",
-                (user_id, job_id, base_score, target_ats, tailored_blob, tailored_filename, json.dumps(missing_kw))
-            )
-            decision_id = cur.lastrowid
 
-    return jsonify({
-        "ok": True,
-        "decision_id": decision_id,
-        "download_url": f"/api/download_resume/{decision_id}",
-        "ats_score": target_ats,
-        "added_keywords": missing_kw
-    })
+            company_clean = re.sub(r"[^\w\s-]", "", job["company"] or "Company").strip().replace(" ", "_")
+            tailored_filename = f"Tailored_{company_clean}_Resume.docx"
+
+            existing_dec = conn.execute(
+                "SELECT id, base_ats_score FROM user_job_decisions WHERE user_id = ? AND job_posting_id = ?",
+                (user_id, job_id)
+            ).fetchone()
+
+            base_score = existing_dec["base_ats_score"] if existing_dec else max(45, target_ats - 15)
+
+            if existing_dec:
+                conn.execute(
+                    """UPDATE user_job_decisions SET
+                       decision = 'approve', ats_score = ?, was_tailored = 1,
+                       tailored_resume_blob = ?, tailored_resume_filename = ?, added_keywords = ?
+                       WHERE id = ?""",
+                    (target_ats, tailored_blob, tailored_filename, json.dumps(missing_kw), existing_dec["id"])
+                )
+                decision_id = existing_dec["id"]
+            else:
+                cur = conn.execute(
+                    """INSERT INTO user_job_decisions
+                       (user_id, job_posting_id, decision, base_ats_score, ats_score, was_tailored,
+                        tailored_resume_blob, tailored_resume_filename, added_keywords, applied)
+                       VALUES (?, ?, 'approve', ?, ?, 1, ?, ?, ?, 0)""",
+                    (user_id, job_id, base_score, target_ats, tailored_blob, tailored_filename, json.dumps(missing_kw))
+                )
+                decision_id = cur.lastrowid
+
+        return jsonify({
+            "ok": True,
+            "decision_id": decision_id,
+            "download_url": f"/api/download_resume/{decision_id}",
+            "ats_score": target_ats,
+            "added_keywords": missing_kw
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": f"Tailoring failed: {str(e)}"}), 500
 
 
 @app.route("/api/decide", methods=["POST"])
 @login_required
 def api_decide():
-    body = request.get_json(force=True)
+    body = request.get_json(force=True) or {}
     job_posting_id = body.get("job_posting_id")
     decision = body.get("decision")
     if decision not in ("approve", "reject", "skip"):
@@ -357,7 +364,7 @@ def api_download_resume(decision_id):
             (decision_id, user_id),
         ).fetchone()
     if not row or not row["tailored_resume_blob"]:
-        return jsonify({"error": "No tailored resume for this application."}), 404
+        return jsonify({"error": "No tailored resume found."}), 404
     return send_file(
         io.BytesIO(row["tailored_resume_blob"]),
         as_attachment=True,

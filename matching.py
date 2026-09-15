@@ -29,18 +29,25 @@ def _profile_row_to_dict(row):
     return d
 
 
-def extract_text_safely(blob: bytes, filename: str = "") -> str:
-    """Safely extracts raw text from stored resume blob whether docx, pdf, or plain text."""
+def extract_text_safely(blob, filename="resume.docx"):
+    """Safely extracts raw text from stored resume blob whether bytes, docx, pdf, or text."""
     if not blob:
         return ""
+    if isinstance(blob, str):
+        return blob
+
     try:
         if resume_tailor and hasattr(resume_tailor, "extract_resume_text"):
-            return resume_tailor.extract_resume_text(blob)
+            text = resume_tailor.extract_resume_text(blob)
+            if text and text.strip():
+                return text
     except Exception:
         pass
 
     try:
-        return profile_builder.extract_text_from_upload(blob, filename or "resume.docx")
+        text = profile_builder.extract_text_from_upload(blob, filename or "resume.docx")
+        if text and text.strip():
+            return text
     except Exception:
         pass
 
@@ -50,7 +57,7 @@ def extract_text_safely(blob: bytes, filename: str = "") -> str:
         return ""
 
 
-def location_matches(job_location: str, user_locations: list, remote_allowed: bool) -> bool:
+def location_matches(job_location, user_locations, remote_allowed):
     """Checks whether a job listing matches location filters or allows all."""
     if not job_location or not user_locations:
         return True
@@ -66,19 +73,16 @@ def location_matches(job_location: str, user_locations: list, remote_allowed: bo
     return any(loc in loc_lower for loc in user_locs_clean)
 
 
-def calculate_dynamic_ats(resume_text: str, candidate_skills: list, candidate_titles: list, job: dict) -> int:
+def calculate_dynamic_ats(resume_text, candidate_skills, candidate_titles, job):
     """
-    Computes an authentic dynamic ATS score based on:
-    - Target title alignment vs Job title (40 pts)
-    - Candidate skills overlap vs Job title/description (40 pts)
-    - Resume content/experience overlap vs Job keywords (20 pts)
+    Computes a dynamic ATS score (38% - 96%).
     """
-    job_title = (job.get("title") or "").lower()
-    job_desc = (job.get("description") or "").lower()
-    job_company = (job.get("company") or "").lower()
+    job_title = str(job.get("title") or "").lower()
+    job_desc = str(job.get("description") or "").lower()
+    job_company = str(job.get("company") or "").lower()
     job_full = f"{job_title} {job_desc} {job_company}"
 
-    resume_clean = (resume_text or "").lower()
+    resume_clean = str(resume_text or "").lower()
 
     # 1. Title Match Score (Max 40 pts)
     title_score = 15.0
@@ -182,7 +186,7 @@ def match_new_jobs_for_user(user_id: int) -> dict:
 
 def get_active_jobs_for_user(user_id: int):
     """
-    Returns all jobs with their computed scores sorted in descending order.
+    Returns all jobs with computed scores sorted descending.
     Explicitly serializes jp.id so it is never null or undefined.
     """
     with db_session() as conn:

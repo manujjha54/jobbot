@@ -342,6 +342,22 @@
     let activeResumeToken = null;
     let extractedSkills = [];
 
+    // Check status on page load to restore UI if resume exists
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        if (data.resume_exists) {
+          document.getElementById('parsed-results').style.display = 'block';
+          if (data.target_titles && data.target_titles.length) {
+            document.getElementById('target-titles').value = data.target_titles.join(', ');
+          }
+        }
+      } catch (e) {
+        console.error('Could not load status:', e);
+      }
+    });
+
     async function handleLogout() {
       try {
         await fetch('/api/logout', { method: 'POST' });
@@ -425,12 +441,12 @@
       btn.innerText = 'Scoring India Pool...';
 
       try {
-        await fetch('/api/save_profile', {
+        const saveRes = await fetch('/api/save_profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             resume_token: activeResumeToken,
-            target_titles: targetTitles,
+            target_titles: targetTitles.length ? targetTitles : ["Customer Success Manager"],
             must_have_skills: extractedSkills,
             years_experience: yearsExp,
             ats_min_score: 30,
@@ -439,13 +455,25 @@
           })
         });
 
+        if (!saveRes.ok) {
+          const saveErr = await saveRes.json();
+          alert(saveErr.error || 'Failed to save criteria.');
+          return;
+        }
+
         const matchRes = await fetch('/api/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
         });
-        const matchData = await matchRes.json();
+        
+        if (!matchRes.ok) {
+          const matchErr = await matchRes.json();
+          alert(matchErr.error || 'Failed to score pool jobs.');
+          return;
+        }
 
+        const matchData = await matchRes.json();
         const tbody = document.getElementById('matches-tbody');
         tbody.innerHTML = '';
         document.getElementById('match-section').style.display = 'block';
@@ -454,49 +482,45 @@
           document.getElementById('match-summary-text').innerText = `Fetched ${matchData.jobs.length} matching positions. Click 'Approve & Inject Keywords' on any vacancy to generate a bespoke tailored .docx resume.`;
           
           matchData.jobs.forEach((job) => {
-            try {
-              const rawScore = job.ats_score || job.base_ats_score || 60;
-              const isAboveTarget = rawScore >= targetAts;
-              const scoreClass = isAboveTarget ? 'score-matched' : 'score-low';
-              
-              const jobId = job.id || job.job_posting_id;
-              if (!jobId) return;
+            const rawScore = job.ats_score || job.base_ats_score || 60;
+            const isAboveTarget = rawScore >= targetAts;
+            const scoreClass = isAboveTarget ? 'score-matched' : 'score-low';
+            
+            const jobId = job.id || job.job_posting_id;
+            if (!jobId) return;
 
-              const row = document.createElement('tr');
-              row.id = `job-row-${jobId}`;
-              
-              const isTailored = Boolean(job.was_tailored || (job.decision_id && job.was_tailored === 1));
+            const row = document.createElement('tr');
+            row.id = `job-row-${jobId}`;
+            
+            const isTailored = Boolean(job.was_tailored || (job.decision_id && job.was_tailored === 1));
 
-              const resumeButtonHtml = (job.decision_id && isTailored)
-                ? `<a href="/api/download_resume/${job.decision_id}" class="btn-secondary btn-download" download>📄 Download .docx</a>`
-                : `<button type="button" class="btn-secondary btn-tailor" onclick="tailorAndApprove(${jobId}, ${targetAts})">✨ Approve & Inject Keywords</button>`;
+            const resumeButtonHtml = (job.decision_id && isTailored)
+              ? `<a href="/api/download_resume/${job.decision_id}" class="btn-secondary btn-download" download>📄 Download .docx</a>`
+              : `<button type="button" class="btn-secondary btn-tailor" onclick="tailorAndApprove(${jobId}, ${targetAts})">✨ Approve & Inject Keywords</button>`;
 
-              row.innerHTML = `
-                <td>
-                  <div style="font-weight: 700; color: var(--text);">${job.title}</div>
-                  <div style="font-size: 0.82rem; color: var(--text-muted);">${job.company}</div>
-                </td>
-                <td style="color: var(--text-muted);">${job.location}</td>
-                <td><span id="score-val-${jobId}" class="score-badge ${scoreClass}">${rawScore}% ATS</span></td>
-                <td id="resume-cell-${jobId}">
-                  ${resumeButtonHtml}
-                </td>
-                <td>
-                  <a href="${job.url}" target="_blank" class="btn-secondary" style="background: rgba(99, 102, 241, 0.25); color: #e0e7ff;" onclick="recordApply(${jobId})">
-                    Apply on Job Site ↗
-                  </a>
-                </td>
-              `;
-              tbody.appendChild(row);
-            } catch (err) {
-              console.error('Error rendering row:', err, job);
-            }
+            row.innerHTML = `
+              <td>
+                <div style="font-weight: 700; color: var(--text);">${job.title}</div>
+                <div style="font-size: 0.82rem; color: var(--text-muted);">${job.company}</div>
+              </td>
+              <td style="color: var(--text-muted);">${job.location}</td>
+              <td><span id="score-val-${jobId}" class="score-badge ${scoreClass}">${rawScore}% ATS</span></td>
+              <td id="resume-cell-${jobId}">
+                ${resumeButtonHtml}
+              </td>
+              <td>
+                <a href="${job.url}" target="_blank" class="btn-secondary" style="background: rgba(99, 102, 241, 0.25); color: #e0e7ff;" onclick="recordApply(${jobId})">
+                  Apply on Job Site ↗
+                </a>
+              </td>
+            `;
+            tbody.appendChild(row);
           });
         } else {
-          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--text-muted); padding: 2rem;">No jobs found matching chosen criteria. Try broadening locations or target titles.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--text-muted); padding: 2rem;">No jobs found matching criteria.</td></tr>`;
         }
       } catch (err) {
-        alert('Failed to score pool jobs.');
+        alert('Network error while communicating with server.');
       } finally {
         btn.disabled = false;
         btn.innerText = 'Score India Pool & Show Opportunities →';
