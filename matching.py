@@ -12,13 +12,24 @@ from db import db_session, json_loads_safe
 import resume_tailor
 
 
+def _profile_row_to_dict(row):
+    """Converts a profiles database row into a structured dictionary for applying/matching."""
+    if not row:
+        return {}
+    d = dict(row)
+    d["target_titles"] = json_loads_safe(d.get("target_titles")) or []
+    d["must_have_skills"] = json_loads_safe(d.get("must_have_skills")) or []
+    d["nice_to_have_skills"] = json_loads_safe(d.get("nice_to_have_skills")) or []
+    d["acceptable_locations"] = json_loads_safe(d.get("acceptable_locations")) or []
+    return d
+
+
 def location_matches(job_location: str, user_locations: list, remote_allowed: bool) -> bool:
     """Checks whether a job listing matches user location filters or remote preference."""
     if not job_location:
         return True
     loc_lower = job_location.lower()
     
-    # Check remote indicators
     if remote_allowed and any(r in loc_lower for r in ["remote", "hybrid", "anywhere", "wfh", "telecommute"]):
         return True
         
@@ -37,7 +48,6 @@ def title_matches(job_title: str, target_titles: list) -> bool:
         target_clean = target.strip().lower()
         if target_clean in job_lower:
             return True
-        # Check token fragments for multi-word titles
         target_tokens = [w for w in re.findall(r"\b[a-z]{4,}\b", target_clean)]
         if any(token in job_lower for token in target_tokens):
             return True
@@ -46,7 +56,7 @@ def title_matches(job_title: str, target_titles: list) -> bool:
 
 def calculate_ats_score(resume_text: str, job_title: str, job_desc: str, candidate_skills: list = None) -> int:
     """
-    Computes an authentic dynamic ATS match percentage (15% - 98%):
+    Computes a dynamic ATS match percentage (15% - 98%):
     - 35% Title alignment
     - 45% Skill and proficiency overlap
     - 20% Keyword density
@@ -110,7 +120,6 @@ def match_new_jobs_for_user(user_id: int) -> dict:
 
         matched_count = 0
         for job in postings:
-            # Apply location and title filters
             if not location_matches(job["location"], user_locations, remote_allowed):
                 continue
             if not title_matches(job["title"], target_titles):
