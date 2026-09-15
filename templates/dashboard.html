@@ -457,7 +457,10 @@
             const rawScore = job.ats_score || job.base_ats_score || 60;
             const isAboveTarget = rawScore >= targetAts;
             const scoreClass = isAboveTarget ? 'score-matched' : 'score-low';
+            
+            // Resolve Job ID safely across all potential key names
             const jobId = job.id || job.job_posting_id;
+            if (!jobId) return;
 
             const row = document.createElement('tr');
             row.id = `job-row-${jobId}`;

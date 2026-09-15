@@ -34,20 +34,17 @@ def extract_text_safely(blob: bytes, filename: str = "") -> str:
     if not blob:
         return ""
     try:
-        # Try docx first
         if resume_tailor and hasattr(resume_tailor, "extract_resume_text"):
             return resume_tailor.extract_resume_text(blob)
     except Exception:
         pass
 
     try:
-        # Fallback to profile_builder extractor
         return profile_builder.extract_text_from_upload(blob, filename or "resume.docx")
     except Exception:
         pass
 
     try:
-        # Plain text fallback
         return blob.decode("utf-8", errors="ignore")
     except Exception:
         return ""
@@ -83,8 +80,8 @@ def calculate_dynamic_ats(resume_text: str, candidate_skills: list, candidate_ti
 
     resume_clean = (resume_text or "").lower()
 
-    # --- 1. Title Match Score (Max 40 pts) ---
-    title_score = 15.0  # baseline
+    # 1. Title Match Score (Max 40 pts)
+    title_score = 15.0
     clean_job_title_tokens = set(re.findall(r"\b[a-z]{3,}\b", job_title)) - {"and", "the", "for", "with", "ltd", "inc"}
     
     if candidate_titles:
@@ -101,7 +98,7 @@ def calculate_dynamic_ats(resume_text: str, candidate_skills: list, candidate_ti
         overlap = sum(1 for w in clean_job_title_tokens if w in resume_clean) / max(len(clean_job_title_tokens), 1)
         title_score = 15.0 + (overlap * 25.0)
 
-    # --- 2. Skill Overlap Score (Max 40 pts) ---
+    # 2. Skill Overlap Score (Max 40 pts)
     skill_score = 10.0
     if candidate_skills:
         matched_skills = 0
@@ -112,13 +109,12 @@ def calculate_dynamic_ats(resume_text: str, candidate_skills: list, candidate_ti
                 matched_skills += 1
         skill_score = (matched_skills / max(total_eval, 1)) * 40.0
     else:
-        # Extract keywords from job and match in resume
         job_keywords = set(re.findall(r"\b[a-z]{4,}\b", job_full)) - {"with", "that", "this", "from", "have", "will", "your", "about", "team", "work"}
         if job_keywords and resume_clean:
             matched = sum(1 for w in list(job_keywords)[:15] if w in resume_clean)
             skill_score = (matched / min(len(job_keywords), 15)) * 40.0
 
-    # --- 3. Content Density / Term Overlap (Max 20 pts) ---
+    # 3. Content Density / Term Overlap (Max 20 pts)
     density_score = 8.0
     if resume_clean:
         job_words = Counter(re.findall(r"\b[a-z]{4,}\b", job_full))
@@ -127,11 +123,9 @@ def calculate_dynamic_ats(resume_text: str, candidate_skills: list, candidate_ti
             density_matches = sum(1 for t in top_terms if t in resume_clean)
             density_score = (density_matches / len(top_terms)) * 20.0
     else:
-        # Subtle variance based on job id hash if resume text is pending
         density_score = 5.0 + (hash(job.get("title", "")) % 10)
 
     final_score = int(round(title_score + skill_score + density_score))
-    # Bound between 38% and 96%
     return max(38, min(final_score, 96))
 
 
@@ -189,15 +183,23 @@ def match_new_jobs_for_user(user_id: int) -> dict:
 def get_active_jobs_for_user(user_id: int):
     """
     Returns all jobs with their computed scores sorted in descending order.
+    Guarantees 'id' and 'job_posting_id' are present on every record.
     """
     with db_session() as conn:
         rows = conn.execute(
-            """SELECT jp.id, jp.title, jp.company, jp.location, jp.url, jp.description,
-                      ujd.id as decision_id, 
-                      ujd.ats_score,
-                      ujd.base_ats_score,
-                      COALESCE(ujd.was_tailored, 0) as was_tailored,
-                      COALESCE(ujd.decision, 'undecided') as decision
+            """SELECT 
+                  jp.id,
+                  jp.id AS job_posting_id,
+                  jp.title, 
+                  jp.company, 
+                  jp.location, 
+                  jp.url, 
+                  jp.description,
+                  ujd.id AS decision_id, 
+                  ujd.ats_score,
+                  ujd.base_ats_score,
+                  COALESCE(ujd.was_tailored, 0) AS was_tailored,
+                  COALESCE(ujd.decision, 'undecided') AS decision
                FROM job_postings jp
                LEFT JOIN user_job_decisions ujd ON jp.id = ujd.job_posting_id AND ujd.user_id = ?
                ORDER BY COALESCE(ujd.ats_score, ujd.base_ats_score, 0) DESC
@@ -208,13 +210,11 @@ def get_active_jobs_for_user(user_id: int):
         results = []
         for r in rows:
             d = dict(r)
-            # Ensure an integer score is always returned
             score = d["ats_score"] if d["ats_score"] is not None else d["base_ats_score"]
             if score is None or score == 0:
                 score = 55 + (hash(d["title"]) % 30)
             d["ats_score"] = int(score)
             results.append(d)
 
-        # Sort descending by final score
         results.sort(key=lambda x: x["ats_score"], reverse=True)
         return results
