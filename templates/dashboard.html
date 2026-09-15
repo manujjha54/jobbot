@@ -453,13 +453,14 @@
         if (matchData.jobs && matchData.jobs.length > 0) {
           document.getElementById('match-summary-text').innerText = `Fetched ${matchData.jobs.length} matching positions. Click 'Approve & Inject Keywords' on any vacancy to generate a bespoke tailored .docx resume.`;
           
-          matchData.jobs.forEach((job, index) => {
+          matchData.jobs.forEach((job) => {
             try {
               const rawScore = job.ats_score || job.base_ats_score || 60;
               const isAboveTarget = rawScore >= targetAts;
               const scoreClass = isAboveTarget ? 'score-matched' : 'score-low';
               
-              const jobId = job.id || job.job_posting_id || (index + 1);
+              const jobId = job.id || job.job_posting_id;
+              if (!jobId) return;
 
               const row = document.createElement('tr');
               row.id = `job-row-${jobId}`;
@@ -472,16 +473,16 @@
 
               row.innerHTML = `
                 <td>
-                  <div style="font-weight: 700; color: var(--text);">${job.title || 'Role Opportunity'}</div>
-                  <div style="font-size: 0.82rem; color: var(--text-muted);">${job.company || 'Direct Employer'}</div>
+                  <div style="font-weight: 700; color: var(--text);">${job.title}</div>
+                  <div style="font-size: 0.82rem; color: var(--text-muted);">${job.company}</div>
                 </td>
-                <td style="color: var(--text-muted);">${job.location || 'India / Remote'}</td>
+                <td style="color: var(--text-muted);">${job.location}</td>
                 <td><span id="score-val-${jobId}" class="score-badge ${scoreClass}">${rawScore}% ATS</span></td>
                 <td id="resume-cell-${jobId}">
                   ${resumeButtonHtml}
                 </td>
                 <td>
-                  <a href="${job.url || '#'}" target="_blank" class="btn-secondary" style="background: rgba(99, 102, 241, 0.25); color: #e0e7ff;" onclick="recordApply(${jobId})">
+                  <a href="${job.url}" target="_blank" class="btn-secondary" style="background: rgba(99, 102, 241, 0.25); color: #e0e7ff;" onclick="recordApply(${jobId})">
                     Apply on Job Site ↗
                   </a>
                 </td>

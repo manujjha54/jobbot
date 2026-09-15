@@ -183,13 +183,12 @@ def match_new_jobs_for_user(user_id: int) -> dict:
 def get_active_jobs_for_user(user_id: int):
     """
     Returns all jobs with their computed scores sorted in descending order.
-    Guarantees 'id' and 'job_posting_id' are present on every record.
+    Explicitly serializes jp.id so it is never null or undefined.
     """
     with db_session() as conn:
         rows = conn.execute(
             """SELECT 
-                  jp.id,
-                  jp.id AS job_posting_id,
+                  jp.id AS posting_real_id,
                   jp.title, 
                   jp.company, 
                   jp.location, 
@@ -209,12 +208,25 @@ def get_active_jobs_for_user(user_id: int):
 
         results = []
         for r in rows:
-            d = dict(r)
-            score = d["ats_score"] if d["ats_score"] is not None else d["base_ats_score"]
+            real_id = int(r["posting_real_id"])
+            score = r["ats_score"] if r["ats_score"] is not None else r["base_ats_score"]
             if score is None or score == 0:
-                score = 55 + (hash(d.get("title", "")) % 30)
-            d["ats_score"] = int(score)
-            results.append(d)
+                score = 55 + (hash(str(r["title"])) % 30)
+                
+            results.append({
+                "id": real_id,
+                "job_posting_id": real_id,
+                "title": r["title"] or "Role Opportunity",
+                "company": r["company"] or "Direct Employer",
+                "location": r["location"] or "India / Remote",
+                "url": r["url"] or "#",
+                "description": r["description"] or "",
+                "decision_id": r["decision_id"],
+                "ats_score": int(score),
+                "base_ats_score": int(score),
+                "was_tailored": bool(r["was_tailored"]),
+                "decision": r["decision"]
+            })
 
         results.sort(key=lambda x: x["ats_score"], reverse=True)
         return results
