@@ -461,6 +461,11 @@
 
             const row = document.createElement('tr');
             row.id = `job-row-${jobId}`;
+            
+            const resumeButtonHtml = (job.decision_id && job.was_tailored)
+              ? `<a href="/api/download_resume/${job.decision_id}" class="btn-secondary btn-download" download>📄 Download .docx</a>`
+              : `<button type="button" class="btn-secondary btn-tailor" onclick="tailorAndApprove(${jobId}, ${targetAts})">✨ Approve & Inject Keywords</button>`;
+
             row.innerHTML = `
               <td>
                 <div style="font-weight: 700; color: var(--text);">${job.title || 'Role'}</div>
@@ -469,10 +474,7 @@
               <td style="color: var(--text-muted);">${job.location || 'India / Remote'}</td>
               <td><span id="score-val-${jobId}" class="score-badge ${scoreClass}">${rawScore}% ATS</span></td>
               <td id="resume-cell-${jobId}">
-                ${job.decision_id && job.was_tailored
-                  ? `<a href="/api/download_resume/${job.decision_id}" class="btn-secondary btn-download" download>📄 Download .docx</a>`
-                  : `<button type="button" class="btn-secondary btn-tailor" onclick="tailorAndApprove(${jobId}, ${targetAts})">✨ Approve & Inject Keywords</button>`
-                }
+                ${resumeButtonHtml}
               </td>
               <td>
                 <a href="${job.url || '#'}" target="_blank" class="btn-secondary" style="background: rgba(99, 102, 241, 0.25); color: #e0e7ff;" onclick="recordApply(${jobId})">
@@ -494,6 +496,11 @@
     }
 
     async function tailorAndApprove(jobId, targetAts) {
+      if (!jobId) {
+        alert('Invalid Job ID');
+        return;
+      }
+
       const cell = document.getElementById(`resume-cell-${jobId}`);
       cell.innerHTML = `<span style="font-size:0.8rem; color:var(--accent);">Injecting keywords into .docx...</span>`;
 
@@ -503,16 +510,18 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ job_id: jobId, target_ats: targetAts })
         });
+        
         const data = await res.json();
 
-        if (res.ok && data.ok) {
+        if (res.ok && data.ok && data.download_url) {
           const scoreBadge = document.getElementById(`score-val-${jobId}`);
-          scoreBadge.className = 'score-badge score-matched';
-          scoreBadge.innerText = `${data.ats_score}% ATS (Tailored)`;
-
+          if (scoreBadge) {
+            scoreBadge.className = 'score-badge score-matched';
+            scoreBadge.innerText = `${data.ats_score}% ATS (Tailored)`;
+          }
           cell.innerHTML = `<a href="${data.download_url}" class="btn-secondary btn-download" download>📄 Download Tailored .docx</a>`;
         } else {
-          cell.innerHTML = `<span style="font-size:0.8rem; color:#fca5a5;">Failed to tailor.</span>`;
+          cell.innerHTML = `<span style="font-size:0.8rem; color:#fca5a5;">${data.error || 'Failed to tailor.'}</span>`;
         }
       } catch (e) {
         cell.innerHTML = `<span style="font-size:0.8rem; color:#fca5a5;">Network error.</span>`;

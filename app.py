@@ -234,22 +234,25 @@ def api_jobs():
     return jsonify({"jobs": matching.get_active_jobs_for_user(current_user_id())})
 
 
-@app.route("/api/tailor_and_approve", methods=["POST"])
+@app.route("/api/tailor_and_approve", methods=["POST"], strict_slashes=False)
 @login_required
 def api_tailor_and_approve():
-    body = request.get_json(force=True)
+    body = request.get_json(force=True) or {}
     job_id = body.get("job_id")
     target_ats = int(body.get("target_ats", 85))
     user_id = current_user_id()
+
+    if not job_id:
+        return jsonify({"error": "Missing job_id parameter."}), 400
 
     with db_session() as conn:
         profile = conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone()
         job = conn.execute("SELECT * FROM job_postings WHERE id = ?", (job_id,)).fetchone()
 
         if not profile or not profile["resume_blob"]:
-            return jsonify({"error": "No resume found. Please upload a resume first."}), 400
+            return jsonify({"error": "Please upload a resume first."}), 400
         if not job:
-            return jsonify({"error": "Job posting not found."}), 404
+            return jsonify({"error": f"Job posting #{job_id} not found."}), 404
 
         # Extract words from job description and title
         job_full_text = f"{job['title']} {job['description'] or ''}"
