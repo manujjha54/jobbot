@@ -1,243 +1,170 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JobBot | Admin Console</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg: #0b0f19;
-      --card-bg: rgba(17, 24, 39, 0.75);
-      --card-border: rgba(255, 255, 255, 0.08);
-      --primary: #6366f1;
-      --primary-gradient: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
-      --accent: #06b6d4;
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --radius-lg: 16px;
-      --radius-sm: 8px;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background-color: var(--bg);
-      background-image: radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.12) 0%, transparent 50%);
-      color: var(--text);
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    header {
-      padding: 1.25rem 2.5rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid var(--card-border);
-      background: rgba(11, 15, 25, 0.85);
-      backdrop-filter: blur(12px);
-    }
-
-    .brand-group {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      text-decoration: none;
-    }
-
-    .logo-badge {
-      width: 40px;
-      height: 40px;
-      background: var(--primary-gradient);
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
-    }
-
-    .logo-title {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 1.35rem;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.5px;
-    }
-
-    .admin-badge {
-      background: rgba(239, 68, 68, 0.15);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      color: #fca5a5;
-      padding: 4px 10px;
-      border-radius: 50px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-    }
-
-    .nav-actions {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .nav-link {
-      color: var(--text-muted);
-      text-decoration: none;
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
-
-    .nav-link:hover {
-      color: var(--text);
-    }
-
-    .btn-logout {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid var(--card-border);
-      color: var(--text);
-      padding: 6px 14px;
-      border-radius: var(--radius-sm);
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    .container {
-      max-width: 1100px;
-      width: 100%;
-      margin: 2rem auto;
-      padding: 0 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 2rem;
-    }
-
-    .card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius-lg);
-      padding: 2rem;
-      backdrop-filter: blur(16px);
-      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
-    }
-
-    .btn-action {
-      background: var(--primary-gradient);
-      color: white;
-      border: none;
-      padding: 11px 20px;
-      border-radius: var(--radius-sm);
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 0.92rem;
-      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
-      transition: opacity 0.2s;
-    }
-
-    .btn-action:hover {
-      opacity: 0.92;
-    }
-
-    .status-banner {
-      padding: 12px 16px;
-      border-radius: var(--radius-sm);
-      font-size: 0.9rem;
-      margin-top: 1.25rem;
-      display: none;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>jobbot — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #16243F; --indigo: #4F46E5; --violet: #7C3AED; --brass: #B37B2E; --brass-dark: #8F6221;
+    --paper: #F6F5F1; --panel: #FFFFFF;
+    --line: #DAD5C8; --muted: #6E6A5E; --approve: #3A6B4A; --approve-bg: #EDF3EE;
+    --reject: #8C3B32; --reject-bg: #FBEFEC;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; background: var(--paper); color: var(--ink); }
+  h1, h2 { font-family: 'Source Serif 4', serif; font-weight: 600; }
+  header { background: var(--ink); color: white; padding: 20px 32px; display:flex; justify-content:space-between; align-items:center; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  header h1 { font-size: 19px; margin: 0; font-weight: 600; }
+  header a { color: white; font-size: 13px; text-decoration: none; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 1px; }
+  main { max-width: 1080px; margin: 0 auto; padding: 30px 32px 80px; }
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin-bottom: 20px; background: var(--line); border: 1px solid var(--line); }
+  .stat { background: var(--panel); padding: 16px; }
+  .stat .num { font-family: 'Source Serif 4', serif; font-size: 26px; font-weight: 700; }
+  .stat .label { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); padding: 20px 22px; margin-bottom: 16px; }
+  .panel h2 { font-size: 16px; margin: 0 0 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 11.5px; }
+  tr:last-child td { border-bottom: none; }
+  tr.user-row { cursor: pointer; }
+  tr.user-row:hover { background: #FBFAF7; }
+  .badge { padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 700; }
+  .badge.ok { background: var(--approve-bg); color: var(--approve); }
+  .badge.bad { background: var(--reject-bg); color: var(--reject); }
+  button.primary { background: var(--ink); color: white; border: none; padding: 9px 16px; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; }
+  button.primary:hover { background: #0E1929; }
+  .meta-line { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
+  #userDetail { display: none; }
+</style>
 </head>
 <body>
+<header>
+  <div class="brand">
+    <svg width="30" height="30" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="36" height="36" rx="9" fill="url(#logoGrad)"/>
+      <path d="M12 9h8l4 4v13a1 1 0 0 1-1 1H12a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1z" fill="white"/>
+      <path d="M20 9l4 4h-4z" fill="#D7D3FF"/>
+      <path d="M14.5 19.5l3 3 6-6" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <defs>
+        <linearGradient id="logoGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#4F46E5"/>
+          <stop offset="1" stop-color="#7C3AED"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <h1>jobbot — Admin</h1>
+  </div>
+  <a href="/">&larr; Back to dashboard</a>
+</header>
+<main>
+  <div class="stats-row" id="statsRow"></div>
 
-  <header>
-    <div class="brand-group">
-      <a href="/" style="display:flex; align-items:center; gap:14px; text-decoration:none;">
-        <div class="logo-badge">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-            <circle cx="12" cy="12" r="3"/>
-          </svg>
-        </div>
-        <div>
-          <div class="logo-title">JobBot Admin</div>
-        </div>
-      </a>
-      <span class="admin-badge">ADMIN CONSOLE</span>
-    </div>
+  <div class="panel">
+    <h2>Job pool</h2>
+    <div class="meta-line" id="poolMeta"></div>
+    <button class="primary" id="refreshPoolBtn">Refresh job pool now</button>
+    <span id="refreshStatus" style="font-size:13px; color:var(--muted); margin-left:10px;"></span>
+  </div>
 
-    <div class="nav-actions">
-      <a href="/" class="nav-link">← Back to Dashboard</a>
-      <button type="button" class="btn-logout" onclick="handleLogout()">Sign Out</button>
-    </div>
-  </header>
+  <div class="panel">
+    <h2>Users</h2>
+    <table id="usersTable">
+      <thead><tr><th>Email</th><th>Name</th><th>Signed up</th><th>Setup</th><th>Applications</th><th>Failures</th><th>Admin</th></tr></thead>
+      <tbody id="usersTableBody"></tbody>
+    </table>
+  </div>
 
-  <main class="container">
-    <div class="card">
-      <h2 style="font-size: 1.35rem; margin-bottom: 0.5rem;">Job Pool Management</h2>
-      <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.5rem;">Fetch and ingest fresh job listings from connected providers into the central pool.</p>
-      
-      <form id="refresh-pool-form">
-        <button type="submit" id="refresh-btn" class="btn-action">Refresh Job Pool Now</button>
-      </form>
+  <div class="panel" id="userDetail">
+    <h2 id="userDetailTitle">User applications</h2>
+    <table>
+      <thead><tr><th>Date</th><th>Role</th><th>Company</th><th>Method</th><th>Status</th><th>ATS</th><th>Link</th></tr></thead>
+      <tbody id="userDetailBody"></tbody>
+    </table>
+  </div>
+</main>
 
-      <div id="refresh-status" class="status-banner"></div>
-    </div>
-  </main>
+<script>
+const $ = (sel) => document.querySelector(sel);
+function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str || ''; return d.innerHTML; }
 
-  <script>
-    // Logout Handler
-    async function handleLogout() {
-      try {
-        await fetch('/api/logout', { method: 'POST' });
-      } catch (err) {
-        console.error('Logout error:', err);
-      } finally {
-        window.location.href = '/login';
-      }
-    }
+async function loadOverview() {
+  const res = await fetch('/api/admin/overview');
+  const s = await res.json();
+  const stats = [
+    ['Users', s.user_count], ['Applications sent', s.total_applications],
+    ['Emails sent', s.emails_sent], ['Email failures', s.email_failures],
+  ];
+  $('#statsRow').innerHTML = stats.map(([label, num]) => `<div class="stat"><div class="num">${num}</div><div class="label">${label}</div></div>`).join('');
+  $('#poolMeta').textContent = `${s.job_pool_size} postings in the shared pool` +
+    (s.last_refresh ? `, last refresh: ${s.last_refresh.finished_at || 'in progress'} (${s.last_refresh.new_count ?? 0} new)` : ', never refreshed yet');
+}
 
-    // Refresh Pool Handler
-    document.getElementById('refresh-pool-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('refresh-btn');
-      const statusBox = document.getElementById('refresh-status');
+async function loadUsers() {
+  const res = await fetch('/api/admin/users');
+  const data = await res.json();
+  const tbody = $('#usersTableBody');
+  tbody.innerHTML = '';
+  data.users.forEach(u => {
+    const tr = document.createElement('tr');
+    tr.className = 'user-row';
+    tr.innerHTML = `
+      <td>${escapeHtml(u.email)}</td>
+      <td>${escapeHtml(u.name)}</td>
+      <td>${escapeHtml((u.created_at || '').slice(0,10))}</td>
+      <td>${u.setup_complete ? '<span class="badge ok">Complete</span>' : '<span class="badge bad">Incomplete</span>'}</td>
+      <td>${u.applications}</td>
+      <td>${u.failures > 0 ? `<span class="badge bad">${u.failures}</span>` : '0'}</td>
+      <td>${u.is_admin ? '<span class="badge ok">Admin</span>' : ''}</td>`;
+    tr.addEventListener('click', () => loadUserDetail(u.id, u.email));
+    tbody.appendChild(tr);
+  });
+}
 
-      btn.disabled = true;
-      btn.innerText = 'Fetching Jobs...';
-      statusBox.style.display = 'block';
-      statusBox.style.background = 'rgba(99, 102, 241, 0.15)';
-      statusBox.style.color = '#c7d2fe';
-      statusBox.innerText = 'Connecting to job boards and updating candidate pool...';
+async function loadUserDetail(userId, email) {
+  const res = await fetch(`/api/admin/user/${userId}/applications`);
+  const data = await res.json();
+  $('#userDetail').style.display = 'block';
+  $('#userDetailTitle').textContent = `Applications — ${email}`;
+  const tbody = $('#userDetailBody');
+  tbody.innerHTML = '';
+  if (!data.rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted);">No applications yet.</td></tr>';
+  }
+  data.rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml((r.applied_at || '').slice(0,10))}</td>
+      <td>${escapeHtml(r.title)}</td>
+      <td>${escapeHtml(r.company)}</td>
+      <td>${escapeHtml(r.apply_method)}</td>
+      <td>${escapeHtml(r.status)}</td>
+      <td>${r.ats_score ? r.ats_score + '%' : '—'}</td>
+      <td>${r.url ? `<a href="${r.url}" target="_blank" rel="noopener">Open</a>` : '—'}</td>`;
+    tbody.appendChild(tr);
+  });
+  $('#userDetail').scrollIntoView({ behavior: 'smooth' });
+}
 
-      try {
-        const res = await fetch('/api/admin/refresh_pool', { method: 'POST' });
-        const data = await res.json();
+$('#refreshPoolBtn').addEventListener('click', async () => {
+  const btn = $('#refreshPoolBtn');
+  btn.disabled = true; btn.textContent = 'Refreshing…';
+  $('#refreshStatus').textContent = '';
+  try {
+    const res = await fetch('/api/admin/refresh_pool', { method: 'POST' });
+    const data = await res.json();
+    if (data.error) { $('#refreshStatus').textContent = 'Failed: ' + data.error; }
+    else { $('#refreshStatus').textContent = `Done — ${data.raw_count} fetched, ${data.new_count} new.`; loadOverview(); }
+  } catch (e) { $('#refreshStatus').textContent = 'Failed - check server logs.'; }
+  btn.disabled = false; btn.textContent = 'Refresh job pool now';
+});
 
-        if (res.ok && data.ok) {
-          statusBox.style.background = 'rgba(16, 185, 129, 0.15)';
-          statusBox.style.color = '#6ee7b7';
-          statusBox.innerText = `Job pool successfully updated! Added ${data.new_count || 0} new job postings (${data.raw_count || 0} total fetched).`;
-        } else {
-          statusBox.style.background = 'rgba(239, 68, 68, 0.15)';
-          statusBox.style.color = '#fca5a5';
-          statusBox.innerText = data.error || 'Failed to refresh job pool.';
-        }
-      } catch (err) {
-        statusBox.style.background = 'rgba(239, 68, 68, 0.15)';
-        statusBox.style.color = '#fca5a5';
-        statusBox.innerText = 'Network error while refreshing job pool.';
-      } finally {
-        btn.disabled = false;
-        btn.innerText = 'Refresh Job Pool Now';
-      }
-    });
-  </script>
-
+loadOverview();
+loadUsers();
+</script>
 </body>
 </html>

@@ -1,231 +1,104 @@
 """
 matching.py
-Evaluates all job postings in the database pool directly against the user's
-parsed resume, selected locations, and target titles with real dynamic scoring.
+Scores the SHARED job pool against ONE user's profile. This is the part
+that runs per-user (cheap - pure Python scoring, no external API calls),
+as opposed to job_pool.py's refresh which is shared/expensive and runs
+independently of how many users exist.
 """
 
-import re
 import json
-import io
-from collections import Counter
 from db import db_session, json_loads_safe
+from match_engine import filter_and_rank
 import profile_builder
 
-try:
-    import resume_tailor
-except ImportError:
-    resume_tailor = None
+
+def _profile_row_to_dict(profile_row):
+    """Converts a DB profile row into the dict shape match_engine/ats_score expect."""
+    return profile_builder.build_profile(
+        resume_filename=profile_row["resume_filename"] or "",
+        name="", email="", phone=profile_row["phone"] or "",
+        linkedin=profile_row["linkedin"] or "", location=profile_row["location"] or "",
+        target_titles=json_loads_safe(profile_row["target_titles"]),
+        must_have_skills=json_loads_safe(profile_row["must_have_skills"]),
+        nice_to_have_skills=json_loads_safe(profile_row["nice_to_have_skills"]),
+        years_experience=profile_row["years_experience"],
+        remote_first=bool(profile_row["remote_first"]),
+        acceptable_locations=json_loads_safe(profile_row["acceptable_locations"]),
+    )
 
 
-def _profile_row_to_dict(row):
-    """Converts a profiles database row into a structured dictionary."""
+def get_user_profile_dict(user_id):
+    with db_session() as conn:
+        row = conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone()
     if not row:
-        return {}
-    d = dict(row)
-    d["target_titles"] = json_loads_safe(d.get("target_titles")) or []
-    d["must_have_skills"] = json_loads_safe(d.get("must_have_skills")) or []
-    d["nice_to_have_skills"] = json_loads_safe(d.get("nice_to_have_skills")) or []
-    d["acceptable_locations"] = json_loads_safe(d.get("acceptable_locations")) or []
-    return d
+        return None
+    return _profile_row_to_dict(row)
 
 
-def extract_text_safely(blob, filename="resume.docx"):
-    """Safely extracts raw text from stored resume blob whether bytes, docx, pdf, or text."""
-    if not blob:
-        return ""
-    if isinstance(blob, str):
-        return blob
-
-    try:
-        if resume_tailor and hasattr(resume_tailor, "extract_resume_text"):
-            text = resume_tailor.extract_resume_text(blob)
-            if text and text.strip():
-                return text
-    except Exception:
-        pass
-
-    try:
-        text = profile_builder.extract_text_from_upload(blob, filename or "resume.docx")
-        if text and text.strip():
-            return text
-    except Exception:
-        pass
-
-    try:
-        return blob.decode("utf-8", errors="ignore")
-    except Exception:
-        return ""
-
-
-def calculate_dynamic_ats(resume_text, candidate_skills, candidate_titles, job):
+def match_new_jobs_for_user(user_id, threshold=0.55):
     """
-    Computes a realistic dynamic ATS score (38% - 96%).
-    - Title Match: 40 pts
-    - Skill Overlap: 40 pts
-    - Content/Term Density: 20 pts
-    """
-    job_title = str(job.get("title") or "").lower()
-    job_desc = str(job.get("description") or "").lower()
-    job_company = str(job.get("company") or "").lower()
-    job_full = f"{job_title} {job_desc} {job_company}"
-
-    resume_clean = str(resume_text or "").lower()
-
-    # 1. Title Match Score (Max 40 pts)
-    title_score = 15.0
-    clean_job_title_tokens = set(re.findall(r"\b[a-z]{3,}\b", job_title)) - {"and", "the", "for", "with", "ltd", "inc"}
-    
-    if candidate_titles:
-        for t in candidate_titles:
-            t_clean = str(t).lower().strip()
-            if t_clean and t_clean in job_title:
-                title_score = 40.0
-                break
-            t_tokens = set(re.findall(r"\b[a-z]{3,}\b", t_clean)) - {"and", "the", "for", "with", "ltd", "inc"}
-            if t_tokens and clean_job_title_tokens:
-                overlap = len(t_tokens.intersection(clean_job_title_tokens)) / max(len(t_tokens), 1)
-                title_score = max(title_score, 15.0 + (overlap * 25.0))
-    elif clean_job_title_tokens and resume_clean:
-        overlap = sum(1 for w in clean_job_title_tokens if w in resume_clean) / max(len(clean_job_title_tokens), 1)
-        title_score = 15.0 + (overlap * 25.0)
-
-    # 2. Skill Overlap Score (Max 40 pts)
-    skill_score = 10.0
-    if candidate_skills:
-        matched_skills = 0
-        total_eval = min(len(candidate_skills), 12)
-        for s in candidate_skills[:12]:
-            s_clean = str(s).strip().lower()
-            if s_clean and (s_clean in job_full or any(part in job_full for part in s_clean.split() if len(part) > 3)):
-                matched_skills += 1
-        skill_score = (matched_skills / max(total_eval, 1)) * 40.0
-    else:
-        job_keywords = set(re.findall(r"\b[a-z]{4,}\b", job_full)) - {"with", "that", "this", "from", "have", "will", "your", "about", "team", "work"}
-        if job_keywords and resume_clean:
-            matched = sum(1 for w in list(job_keywords)[:15] if w in resume_clean)
-            skill_score = (matched / min(len(job_keywords), 15)) * 40.0
-
-    # 3. Content Density / Term Overlap (Max 20 pts)
-    density_score = 8.0
-    if resume_clean:
-        job_words = Counter(re.findall(r"\b[a-z]{4,}\b", job_full))
-        top_terms = [w for w, _ in job_words.most_common(12) if w not in ("with", "that", "this", "from", "have", "will", "your", "about", "team", "work")]
-        if top_terms:
-            density_matches = sum(1 for t in top_terms if t in resume_clean)
-            density_score = (density_matches / len(top_terms)) * 20.0
-    else:
-        density_score = 5.0 + (hash(job.get("title", "")) % 10)
-
-    final_score = int(round(title_score + skill_score + density_score))
-    return max(38, min(final_score, 96))
-
-
-def match_new_jobs_for_user(user_id: int) -> dict:
-    """Evaluates all pool listings and updates user match decisions with unique scores."""
-    with db_session() as conn:
-        profile = conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone()
-        if not profile:
-            return {"error": "No profile found.", "considered": 0, "matched": 0}
-
-        resume_blob = profile["resume_blob"]
-        resume_filename = profile["resume_filename"] or ""
-        resume_text = extract_text_safely(resume_blob, resume_filename)
-
-        skills = json_loads_safe(profile["must_have_skills"]) or []
-        target_titles = json_loads_safe(profile["target_titles"]) or []
-
-        postings = conn.execute("SELECT * FROM job_postings WHERE id IS NOT NULL").fetchall()
-        if not postings:
-            return {"considered": 0, "matched": 0}
-
-        matched_count = 0
-        for job_row in postings:
-            job = dict(job_row)
-            if not job.get("id"):
-                continue
-
-            score = calculate_dynamic_ats(resume_text, skills, target_titles, job)
-
-            existing = conn.execute(
-                "SELECT id, was_tailored FROM user_job_decisions WHERE user_id = ? AND job_posting_id = ?",
-                (user_id, job["id"])
-            ).fetchone()
-
-            if existing:
-                if not existing["was_tailored"]:
-                    conn.execute(
-                        "UPDATE user_job_decisions SET base_ats_score = ?, ats_score = ? WHERE id = ?",
-                        (score, score, existing["id"])
-                    )
-            else:
-                conn.execute(
-                    """INSERT INTO user_job_decisions 
-                       (user_id, job_posting_id, base_ats_score, ats_score, decision, was_tailored, applied)
-                       VALUES (?, ?, ?, ?, 'undecided', 0, 0)""",
-                    (user_id, job["id"], score, score)
-                )
-            matched_count += 1
-
-    return {"considered": len(postings), "matched": matched_count}
-
-
-def get_active_jobs_for_user(user_id: int):
-    """
-    Returns all jobs with computed scores sorted descending.
-    Guarantees integer 'id' is always provided.
+    Finds job_postings this user hasn't seen yet (no existing decision row),
+    scores them against their profile, and creates decision rows (decision
+    defaulting to 'skip') for anything that clears the threshold. Returns
+    how many postings were considered and how many matched.
     """
     with db_session() as conn:
-        rows = conn.execute(
-            """SELECT 
-                  jp.id AS posting_id,
-                  jp.title, 
-                  jp.company, 
-                  jp.location, 
-                  jp.url, 
-                  jp.description,
-                  ujd.id AS decision_id, 
-                  ujd.ats_score,
-                  ujd.base_ats_score,
-                  COALESCE(ujd.was_tailored, 0) AS was_tailored,
-                  COALESCE(ujd.decision, 'undecided') AS decision
-               FROM job_postings jp
-               LEFT JOIN user_job_decisions ujd ON jp.id = ujd.job_posting_id AND ujd.user_id = ?
-               WHERE jp.id IS NOT NULL
-               ORDER BY COALESCE(ujd.ats_score, ujd.base_ats_score, 0) DESC
-               LIMIT 200""",
-            (user_id,)
+        profile_row = conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone()
+        if not profile_row or not profile_row["setup_complete"]:
+            return {"considered": 0, "matched": 0, "error": "Profile setup not complete."}
+
+        profile = _profile_row_to_dict(profile_row)
+
+        unseen = conn.execute(
+            """SELECT jp.* FROM job_postings jp
+               WHERE jp.id NOT IN (
+                   SELECT job_posting_id FROM user_job_decisions WHERE user_id = ?
+               )""",
+            (user_id,),
         ).fetchall()
 
-        results = []
-        for r in rows:
-            raw_id = r["posting_id"]
-            if raw_id is None:
-                continue
-            try:
-                real_id = int(raw_id)
-            except (ValueError, TypeError):
-                continue
+        jobs = [{
+            "id": r["id"], "source": r["source"], "title": r["title"], "company": r["company"],
+            "location": r["location"], "remote": bool(r["remote"]), "url": r["url"],
+            "description": r["description"], "posted_date": r["posted_date"],
+            "apply_email": r["apply_email"],
+        } for r in unseen]
 
-            raw_score = r["ats_score"] if r["ats_score"] is not None else r["base_ats_score"]
-            try:
-                score = int(raw_score) if raw_score is not None else (55 + (hash(str(r["title"])) % 30))
-            except (ValueError, TypeError):
-                score = 65
+        matched = filter_and_rank(jobs, profile, threshold=threshold)
 
-            results.append({
-                "id": real_id,
-                "job_posting_id": real_id,
-                "title": str(r["title"] or "Role Opportunity"),
-                "company": str(r["company"] or "Direct Employer"),
-                "location": str(r["location"] or "India / Remote"),
-                "url": str(r["url"] or "#"),
-                "description": str(r["description"] or ""),
-                "decision_id": r["decision_id"],
-                "ats_score": score,
-                "base_ats_score": score,
-                "was_tailored": bool(r["was_tailored"]),
-                "decision": str(r["decision"] or "undecided")
-            })
+        for job in matched:
+            conn.execute(
+                """INSERT OR IGNORE INTO user_job_decisions
+                   (user_id, job_posting_id, decision, match_score, match_reasons)
+                   VALUES (?, ?, 'skip', ?, ?)""",
+                (user_id, job["id"], job["match_score"], json.dumps(job.get("match_reasons", []))),
+            )
+        # Also record "considered but not matched" as nothing - we don't
+        # want to re-score them every time, so mark them seen with a
+        # rejected-by-score sentinel decision that never shows in the UI.
+        matched_ids = {j["id"] for j in matched}
+        for job in jobs:
+            if job["id"] not in matched_ids:
+                conn.execute(
+                    """INSERT OR IGNORE INTO user_job_decisions
+                       (user_id, job_posting_id, decision, match_score)
+                       VALUES (?, ?, 'below_threshold', 0)""",
+                    (user_id, job["id"]),
+                )
 
-        results.sort(key=lambda x: x["ats_score"], reverse=True)
-        return results
+    return {"considered": len(jobs), "matched": len(matched)}
+
+
+def get_active_jobs_for_user(user_id):
+    """Jobs still needing a decision or awaiting apply (excludes below_threshold, applied)."""
+    with db_session() as conn:
+        rows = conn.execute(
+            """SELECT ujd.*, jp.title, jp.company, jp.location, jp.remote, jp.url,
+                      jp.description, jp.source, jp.apply_email
+               FROM user_job_decisions ujd
+               JOIN job_postings jp ON jp.id = ujd.job_posting_id
+               WHERE ujd.user_id = ? AND ujd.applied = 0 AND ujd.decision != 'below_threshold'
+               ORDER BY ujd.match_score DESC""",
+            (user_id,),
+        ).fetchall()
+    return [dict(r) for r in rows]

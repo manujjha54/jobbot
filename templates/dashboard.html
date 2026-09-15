@@ -1,575 +1,626 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JobBot | Candidate Dashboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg: #0b0f19;
-      --card-bg: rgba(17, 24, 39, 0.75);
-      --card-border: rgba(255, 255, 255, 0.08);
-      --primary: #6366f1;
-      --primary-gradient: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
-      --accent: #06b6d4;
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --input-bg: rgba(15, 23, 42, 0.65);
-      --radius-lg: 16px;
-      --radius-sm: 8px;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>jobbot — Smarter resumes. Faster applications.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #16243F; --ink-soft: #3B4A63; --indigo: #4F46E5; --violet: #7C3AED;
+    --brass: #B37B2E; --brass-dark: #8F6221;
+    --paper: #F6F5F1; --panel: #FFFFFF; --line: #DAD5C8;
+    --muted: #6E6A5E; --approve: #3A6B4A; --approve-bg: #EDF3EE;
+    --reject: #8C3B32; --reject-bg: #FBEFEC; --skip-bg: #F1EFE9;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; background: var(--paper); color: var(--ink); line-height: 1.5; }
+  a { color: var(--ink); }
+  h1, h2 { font-family: 'Source Serif 4', serif; font-weight: 600; letter-spacing: -0.01em; }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+  header { background: var(--ink); color: white; padding: 22px 32px 0; }
+  header .titlebar { display: flex; align-items: flex-start; justify-content: space-between; max-width: 1000px; margin: 0 auto; flex-wrap: wrap; gap: 8px; }
+  .brand { display: flex; align-items: center; gap: 11px; }
+  .wordmark { font-family: 'Source Serif 4', serif; font-size: 20px; font-weight: 700; color: white; line-height: 1.1; }
+  header .tagline { font-family: 'Inter', sans-serif; font-size: 12px; color: #A9B3C9; margin-top: 3px; }
+  header .userbar { font-size: 13px; color: #B9C0CE; padding-top: 4px; }
+  header .userbar a { color: white; text-decoration: none; font-weight: 600; margin-left: 14px; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 1px; }
 
-    body {
-      background-color: var(--bg);
-      background-image: radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.12) 0%, transparent 50%);
-      color: var(--text);
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+  /* Folder-tab navigation */
+  nav.tabs { max-width: 1000px; margin: 20px auto 0; display: flex; gap: 3px; padding: 0 2px; }
+  nav.tabs button {
+    background: #223354; border: none; color: #AEB8CC; padding: 11px 18px 10px;
+    font-size: 13.5px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif;
+    border-radius: 6px 6px 0 0; position: relative; top: 1px; border-bottom: 2px solid transparent;
+  }
+  nav.tabs button.active { background: var(--paper); color: var(--ink); font-weight: 600; border-bottom-color: var(--indigo); }
 
-    header {
-      padding: 1.25rem 2.5rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid var(--card-border);
-      background: rgba(11, 15, 25, 0.85);
-      backdrop-filter: blur(12px);
-    }
+  main { max-width: 1000px; margin: 0 auto; padding: 30px 32px 80px; }
+  .view { display: none; }
+  .view.active { display: block; }
 
-    .brand-group {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      text-decoration: none;
-    }
+  .panel { background: var(--panel); border: 1px solid var(--line); padding: 20px 22px; }
+  .panel + .panel { margin-top: 16px; }
+  .panel h2 { font-size: 17px; margin: 0 0 4px; }
+  .panel .desc { font-size: 13px; color: var(--muted); margin: 0 0 16px; }
 
-    .logo-badge {
-      width: 40px;
-      height: 40px;
-      background: var(--primary-gradient);
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
-    }
+  .actionbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .actionbar .left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .status-pill { font-size: 12px; padding: 4px 10px; border-radius: 3px; font-weight: 600; border: 1px solid transparent; }
+  .status-pill.ok { background: var(--approve-bg); color: var(--approve); border-color: #CFE0D3; }
+  .status-pill.bad { background: var(--reject-bg); color: var(--reject); border-color: #E8CFC9; }
+  .summary-line { font-size: 13px; color: var(--muted); }
 
-    .logo-title {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 1.35rem;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.5px;
-      line-height: 1.1;
-    }
+  button.primary {
+    background: var(--ink); color: white; border: none; padding: 11px 20px; border-radius: 4px;
+    font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif;
+  }
+  button.primary:hover { background: #0E1929; }
+  button.primary:disabled { background: #A9ACB8; cursor: default; }
+  button.small { padding: 7px 13px; font-size: 12.5px; }
 
-    .logo-tagline {
-      font-size: 0.78rem;
-      color: var(--accent);
-      font-weight: 500;
-    }
+  /* Ledger-row job listing: score as a data column, not a floating badge */
+  .ledger { border: 1px solid var(--line); }
+  .job-row { display: flex; border-bottom: 1px solid var(--line); background: var(--panel); }
+  .job-row:last-child { border-bottom: none; }
+  .job-row.approved { background: var(--approve-bg); }
+  .job-row.rejected { background: #FAFAF8; opacity: 0.55; }
+  .score-col {
+    width: 64px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 17px; font-weight: 700; color: var(--brass-dark); border-right: 1px solid var(--line);
+    font-variant-numeric: tabular-nums;
+  }
+  .job-content { flex: 1; padding: 14px 18px; min-width: 0; }
+  .job-top { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  .job-title { font-size: 15.5px; font-weight: 650; }
+  .job-company { font-weight: 500; color: var(--muted); }
+  .job-meta { font-size: 12.5px; color: var(--muted); margin: 3px 0 8px; }
+  .job-desc { font-size: 13px; color: #3F4552; margin-bottom: 10px; max-height: 40px; overflow: hidden; }
+  .job-bottom { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .job-link { font-size: 12.5px; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
 
-    .nav-actions {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
+  .segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  .segmented button {
+    background: white; border: none; padding: 6px 13px; font-size: 12.5px; font-weight: 600;
+    cursor: pointer; color: var(--muted); border-right: 1px solid var(--line); font-family: 'Inter', sans-serif;
+  }
+  .segmented button:last-child { border-right: none; }
+  .segmented button.sel-approve.active { background: var(--approve-bg); color: var(--approve); }
+  .segmented button.sel-reject.active { background: var(--reject-bg); color: var(--reject); }
+  .segmented button.sel-skip.active { background: var(--skip-bg); color: var(--ink); }
 
-    .admin-link {
-      color: var(--accent);
-      text-decoration: none;
-      font-size: 0.88rem;
-      font-weight: 600;
-      padding: 6px 12px;
-      border-radius: var(--radius-sm);
-      background: rgba(6, 182, 212, 0.1);
-      border: 1px solid rgba(6, 182, 212, 0.25);
-    }
+  .sticky-apply {
+    position: sticky; bottom: 16px; margin-top: 16px; background: var(--ink); color: white;
+    padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 6px 20px rgba(22,36,63,0.25);
+  }
+  .sticky-apply span { font-size: 13px; color: #C7CEDB; }
+  .sticky-apply button.primary { background: var(--brass); }
+  .sticky-apply button.primary:hover { background: var(--brass-dark); }
 
-    .btn-logout {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid var(--card-border);
-      color: var(--text);
-      padding: 6px 14px;
-      border-radius: var(--radius-sm);
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-    }
+  .empty { text-align: center; padding: 52px 20px; color: var(--muted); font-size: 14px; border: 1px dashed var(--line); background: var(--panel); }
 
-    .container {
-      max-width: 1100px;
-      width: 100%;
-      margin: 2rem auto;
-      padding: 0 1.5rem;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 2rem;
-    }
+  .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; margin-bottom: 20px; background: var(--line); border: 1px solid var(--line); }
+  .stat { background: var(--panel); padding: 16px 16px; }
+  .stat .num { font-family: 'Source Serif 4', serif; font-size: 26px; font-weight: 700; color: var(--ink); }
+  .stat .label { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
 
-    .card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius-lg);
-      padding: 2rem;
-      backdrop-filter: blur(16px);
-      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
-    }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 11.5px; }
+  tr:last-child td { border-bottom: none; }
+  .badge { padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 700; }
+  .badge.sent { background: var(--approve-bg); color: var(--approve); }
+  .badge.draft { background: #FBF1DC; color: #8A5F16; }
+  .badge.manual { background: #EEF0F5; color: var(--ink); }
+  .badge.failed { background: var(--reject-bg); color: var(--reject); }
 
-    .form-input {
-      width: 100%;
-      padding: 10px 14px;
-      background: var(--input-bg);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius-sm);
-      color: var(--text);
-      font-size: 0.9rem;
-      outline: none;
-    }
+  /* Setup form */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; margin-bottom: 14px; }
+  .form-grid label, .block-label { display: flex; flex-direction: column; font-size: 12.5px; font-weight: 600; color: var(--ink); gap: 5px; }
+  .block-label { margin-bottom: 14px; }
+  .block-label .hint { font-weight: 400; color: var(--muted); font-size: 12px; }
+  input[type="text"], input[type="number"], input[type="password"], input[type="email"], textarea {
+    font-family: 'Inter', sans-serif; font-size: 13.5px; font-weight: 400; padding: 8px 10px;
+    border: 1px solid var(--line); border-radius: 3px; color: var(--ink); background: var(--paper);
+  }
+  input:focus, textarea:focus { outline: 2px solid var(--indigo); outline-offset: -1px; background: white; }
+  textarea { resize: vertical; }
+  input[type="file"] { font-size: 13px; }
+  .subpanel { background: #FBFAF7; }
 
-    .form-input:focus {
-      border-color: var(--primary);
-    }
+  /* Tailored resumes */
+  .resume-card { border: 1px solid var(--line); padding: 16px 18px; background: var(--panel); }
+  .resume-card + .resume-card { margin-top: 12px; }
+  .resume-top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+  .score-arrow { font-size: 13px; color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .score-arrow .before { color: var(--reject); }
+  .score-arrow .after { color: var(--approve); }
+  .keyword-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+  .chip { background: #EEF0F5; color: var(--ink); font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 100px; }
+  .resume-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
 
-    .btn-primary {
-      padding: 11px 22px;
-      background: var(--primary-gradient);
-      border: none;
-      border-radius: var(--radius-sm);
-      color: white;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
-    }
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink);
+    color: white; padding: 12px 20px; border-radius: 4px; font-size: 13px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25); display: none; z-index: 100;
+  }
 
-    .btn-secondary {
-      padding: 7px 12px;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius-sm);
-      color: var(--text);
-      font-size: 0.82rem;
-      font-weight: 600;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .btn-tailor {
-      background: rgba(99, 102, 241, 0.2);
-      border-color: rgba(99, 102, 241, 0.4);
-      color: #c7d2fe;
-    }
-
-    .btn-tailor:hover {
-      background: rgba(99, 102, 241, 0.35);
-    }
-
-    .btn-download {
-      background: rgba(16, 185, 129, 0.2);
-      border-color: rgba(16, 185, 129, 0.4);
-      color: #6ee7b7;
-    }
-
-    .skills-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 0.75rem;
-    }
-
-    .skill-chip {
-      background: rgba(99, 102, 241, 0.15);
-      border: 1px solid rgba(99, 102, 241, 0.3);
-      color: #c7d2fe;
-      padding: 5px 12px;
-      border-radius: 50px;
-      font-size: 0.82rem;
-    }
-
-    .results-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1.5rem;
-    }
-
-    .results-table th, .results-table td {
-      padding: 12px 14px;
-      text-align: left;
-      border-bottom: 1px solid var(--card-border);
-      font-size: 0.88rem;
-    }
-
-    .results-table th {
-      color: var(--text-muted);
-      font-size: 0.78rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .score-badge {
-      padding: 4px 8px;
-      border-radius: 50px;
-      font-size: 0.78rem;
-      font-weight: 700;
-    }
-
-    .score-matched {
-      background: rgba(16, 185, 129, 0.15);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      color: #6ee7b7;
-    }
-
-    .score-low {
-      background: rgba(245, 158, 11, 0.15);
-      border: 1px solid rgba(245, 158, 11, 0.3);
-      color: #fcd34d;
-    }
-
-    .status-msg {
-      padding: 10px 14px;
-      border-radius: var(--radius-sm);
-      font-size: 0.9rem;
-      margin-top: 1rem;
-      display: none;
-    }
-  </style>
+  @media (max-width: 680px) {
+    header, main { padding-left: 18px; padding-right: 18px; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .form-grid { grid-template-columns: 1fr; }
+    .job-row { flex-direction: column; }
+    .score-col { width: auto; border-right: none; border-bottom: 1px solid var(--line); padding: 8px; }
+  }
+</style>
 </head>
 <body>
 
-  <header>
-    <a href="/" class="brand-group">
-      <div class="logo-badge">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-          <circle cx="12" cy="12" r="3"/>
-        </svg>
+<header>
+  <div class="titlebar">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="36" height="36" rx="9" fill="url(#logoGrad)"/>
+        <path d="M12 9h8l4 4v13a1 1 0 0 1-1 1H12a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1z" fill="white"/>
+        <path d="M20 9l4 4h-4z" fill="#D7D3FF"/>
+        <path d="M14.5 19.5l3 3 6-6" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <defs>
+          <linearGradient id="logoGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#4F46E5"/>
+            <stop offset="1" stop-color="#7C3AED"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div>
+        <div class="wordmark">jobbot</div>
+        <div class="tagline">Smarter resumes. Faster applications. Zero hassle.</div>
       </div>
-      <div class="logo-text-group">
-        <div class="logo-title">JobBot</div>
-        <div class="logo-tagline">India Region | Precision ATS Keyword Injection</div>
-      </div>
-    </a>
-    <div class="nav-actions">
-      {% if is_admin %}
-        <a href="/admin" class="admin-link">⚙ Admin Panel</a>
-      {% endif %}
-      <span style="font-size: 0.88rem; color: var(--text-muted);">{{ user_email if user_email else '' }}</span>
-      <button type="button" class="btn-logout" onclick="handleLogout()">Sign Out</button>
     </div>
-  </header>
+    <div style="text-align:right;">
+      <div class="userbar" id="userBar"></div>
+      <div class="tagline" id="headerSubtitle" style="margin-top:6px;">Upload a resume in Setup to get started</div>
+    </div>
+  </div>
+  <nav class="tabs">
+    <button class="tab-btn active" data-view="setup">Setup</button>
+    <button class="tab-btn" data-view="search">Search &amp; Review</button>
+    <button class="tab-btn" data-view="resumes">Tailored Resumes</button>
+    <button class="tab-btn" data-view="dashboard">Applications</button>
+  </nav>
+</header>
 
-  <main class="container">
-    <div class="card">
-      <h2 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 0.5rem;">Step 1: Resume & Search Filters</h2>
-      <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.5rem;">Upload your resume, specify locations, and configure target criteria. Any role below your desired ATS score can be auto-tailored.</p>
+<main>
 
-      <form id="resume-form" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-        <input type="file" id="resume-file" name="resume" accept=".docx,.pdf" required style="color: var(--text-muted); font-size: 0.9rem;">
-        <button type="submit" id="parse-btn" class="btn-primary">Parse Resume</button>
-      </form>
+  <!-- SETUP -->
+  <div class="view active" id="view-setup">
+    <div class="panel">
+      <h2>1. Upload your resume</h2>
+      <p class="desc">.docx or .pdf. This becomes the resume used for matching, ATS scoring, and applications.</p>
+      <input type="file" id="resumeFile" accept=".docx,.pdf" style="margin-bottom:12px;">
+      <br>
+      <button class="primary" id="parseBtn">Parse resume</button>
+      <span id="parseStatus" style="font-size:13px; color:var(--muted); margin-left:10px;"></span>
+    </div>
 
-      <div id="status-box" class="status-msg"></div>
+    <div class="panel" id="profileForm" style="display:none;">
+      <h2>2. Review &amp; confirm your profile</h2>
+      <p class="desc">These were auto-suggested from your resume — edit anything that looks off before saving.</p>
 
-      <div id="parsed-results" style="display: none; margin-top: 1.5rem; border-top: 1px solid var(--card-border); padding-top: 1.5rem;">
-        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-          <div>
-            <label style="font-size: 0.8rem; font-weight: 600; color: #cbd5e1; display: block; margin-bottom: 4px;">Target Role Titles (India)</label>
-            <input type="text" id="target-titles" class="form-input" placeholder="e.g. Customer Success Manager, Onboarding Specialist">
-          </div>
-          <div>
-            <label style="font-size: 0.8rem; font-weight: 600; color: #cbd5e1; display: block; margin-bottom: 4px;">Years of Experience</label>
-            <input type="number" id="years-exp" class="form-input" value="10">
-          </div>
-          <div>
-            <label style="font-size: 0.8rem; font-weight: 600; color: #cbd5e1; display: block; margin-bottom: 4px;">Target ATS Score (%)</label>
-            <input type="number" id="ats-min-score" class="form-input" value="80" min="10" max="100">
+      <div class="form-grid">
+        <label>Full name<input type="text" id="f_name"></label>
+        <label>Phone<input type="text" id="f_phone"></label>
+        <label>LinkedIn URL<input type="text" id="f_linkedin"></label>
+        <label>Current location<input type="text" id="f_location"></label>
+        <label>Years of experience<input type="number" id="f_years" min="0"></label>
+      </div>
+
+      <label class="block-label">Target job titles <span class="hint">(comma-separated — this drives both search and what counts as a relevant match)</span>
+        <textarea id="f_titles" rows="2"></textarea>
+      </label>
+
+      <label class="block-label">Skills / keywords <span class="hint">(comma-separated — used for matching and ATS scoring)</span>
+        <textarea id="f_skills" rows="3"></textarea>
+      </label>
+
+      <label class="block-label">Nice-to-have skills <span class="hint">(optional, comma-separated)</span>
+        <textarea id="f_nice_skills" rows="2"></textarea>
+      </label>
+
+      <div class="form-grid">
+        <label>Acceptable locations <span class="hint">(comma-separated)</span>
+          <input type="text" id="f_locations" placeholder="Remote, India, Bengaluru">
+        </label>
+        <label style="align-self:end;">
+          <input type="checkbox" id="f_remote_first" style="width:auto; margin-right:6px;">
+          Prioritize remote roles
+        </label>
+      </div>
+
+      <label class="block-label">Minimum ATS score before auto-tailoring a resume
+        <input type="number" id="f_ats_min" value="90" min="0" max="100" style="width:100px;">
+        <span class="hint">Jobs scoring below this get a tailored resume automatically.</span>
+      </label>
+
+      <button class="primary" id="saveProfileBtn">Save profile &amp; continue</button>
+      <span id="saveStatus" style="font-size:13px; color:var(--muted); margin-left:10px;"></span>
+    </div>
+
+    <div class="panel subpanel">
+      <h2>3. Email sending (optional)</h2>
+      <p class="desc">
+        For postings that list a direct application email, the app can send on your behalf using a Gmail
+        <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">App Password</a>
+        (not your normal password). Your password is encrypted before storage. If you leave this off,
+        applications for those postings will just be marked ready with the draft saved for you to send yourself.
+      </p>
+      <div class="form-grid">
+        <label>Gmail address<input type="email" id="f_gmail_email" placeholder="you@gmail.com"></label>
+        <label>Gmail App Password<input type="password" id="f_gmail_password" placeholder="leave blank to keep existing"></label>
+      </div>
+      <label style="display:flex; align-items:center; font-size:13px; font-weight:600; gap:8px; margin-bottom:14px;">
+        <input type="checkbox" id="f_send_enabled" style="width:auto;">
+        Send emails automatically for approved applications
+      </label>
+      <button class="primary" id="saveGmailBtn">Save email settings</button>
+      <span id="gmailStatus" style="font-size:13px; color:var(--muted); margin-left:10px;"></span>
+    </div>
+  </div>
+
+  <!-- SEARCH & REVIEW -->
+  <div class="view" id="view-search">
+    <div class="actionbar">
+      <div class="left">
+        <button class="primary" id="searchBtn">Search for new jobs</button>
+        <span class="summary-line" id="searchSummary"></span>
+      </div>
+      <div class="left" id="statusPills"></div>
+    </div>
+    <div class="ledger" id="jobList"></div>
+    <div class="empty" id="emptyState" style="display:none;">No jobs waiting for review yet. Click "Search for new jobs" to start.</div>
+    <div class="sticky-apply" id="applyBar" style="display:none;">
+      <span id="approvedCount"></span>
+      <button class="primary" id="applyBtn">Apply to approved jobs</button>
+    </div>
+  </div>
+
+  <!-- TAILORED RESUMES -->
+  <div class="view" id="view-resumes">
+    <p class="desc" style="margin-bottom:16px;">
+      Every resume the app automatically tailored below your ATS threshold, with the specific keywords it added.
+      Spot check these before assuming they're perfect — if a keyword doesn't reflect real experience, download,
+      edit, and re-upload manually for that application instead.
+    </p>
+    <div id="resumeList"></div>
+    <div class="empty" id="resumeEmpty" style="display:none;">No tailored resumes yet — these appear here once you apply to a job that scored below your ATS threshold.</div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="view" id="view-dashboard">
+    <div class="stats-row" id="statsRow"></div>
+    <div class="panel">
+      <table id="appTable">
+        <thead><tr><th>Applied</th><th>Role</th><th>Company</th><th>Method</th><th>Status</th><th>ATS</th><th>Link</th><th>Resume</th></tr></thead>
+        <tbody id="appTableBody"></tbody>
+      </table>
+      <div class="empty" id="dashEmpty" style="display:none;">No applications yet — approve and apply to some jobs first.</div>
+    </div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+
+function showToast(msg, isError) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.style.background = isError ? '#8C3B32' : '#16243F';
+  t.style.display = 'block';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.style.display = 'none', 4500);
+}
+
+function switchTab(view) {
+  $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  $$('.view').forEach(v => v.classList.remove('active'));
+  $('#view-' + view).classList.add('active');
+  if (view === 'dashboard') loadDashboard();
+  if (view === 'resumes') loadTailoredResumes();
+}
+$$('.tab-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.view)));
+
+async function loadMe() {
+  const res = await fetch('/api/me');
+  const me = await res.json();
+  if (!me.logged_in) { window.location.href = '/login'; return; }
+  const bar = $('#userBar');
+  bar.innerHTML = escapeHtml(me.email) + (me.is_admin ? ' <a href="/admin">Admin</a>' : '') + ' <a href="#" id="logoutLink">Log out</a>';
+  $('#logoutLink').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await fetch('/api/logout', { method: 'POST' });
+    window.location.href = '/login';
+  });
+}
+
+let initialLoadDone = false;
+async function loadStatus() {
+  try {
+    const res = await fetch('/api/status');
+    const s = await res.json();
+    const pills = $('#statusPills');
+    pills.innerHTML = '';
+    pills.appendChild(pillEl('Resume', s.resume_exists));
+    pills.appendChild(pillEl('Email sending', s.gmail_configured && s.send_emails_enabled));
+
+    const subtitle = $('#headerSubtitle');
+    subtitle.textContent = s.setup_complete
+      ? (s.profile_name ? s.profile_name + ' — ' : '') + (s.target_titles || []).slice(0, 3).join(', ')
+      : 'Upload a resume in Setup to get started';
+
+    if (!initialLoadDone) {
+      initialLoadDone = true;
+      if (s.setup_complete) switchTab('search');
+    }
+  } catch (e) {}
+}
+function pillEl(label, ok) {
+  const span = document.createElement('span');
+  span.className = 'status-pill ' + (ok ? 'ok' : 'bad');
+  span.textContent = label + (ok ? ' on' : ' off');
+  return span;
+}
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+
+let pendingResumeFilename = null;
+let pendingResumeToken = null;
+
+$('#parseBtn').addEventListener('click', async () => {
+  const fileInput = $('#resumeFile');
+  if (!fileInput.files.length) { showToast('Choose a .docx or .pdf resume first.', true); return; }
+  const btn = $('#parseBtn');
+  btn.disabled = true; btn.textContent = 'Parsing…';
+  const formData = new FormData();
+  formData.append('resume', fileInput.files[0]);
+  try {
+    const res = await fetch('/api/parse_resume', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.error) { showToast(data.error, true); }
+    else {
+      pendingResumeFilename = data.resume_filename;
+      pendingResumeToken = data.resume_token;
+      $('#f_titles').value = (data.suggested_titles || []).join(', ');
+      $('#f_skills').value = (data.suggested_skills || []).join(', ');
+      $('#f_years').value = data.suggested_years_experience || '';
+      $('#profileForm').style.display = 'block';
+      $('#parseStatus').textContent = 'Parsed — review the fields below.';
+      $('#profileForm').scrollIntoView({ behavior: 'smooth' });
+    }
+  } catch (e) { showToast('Could not parse that resume.', true); }
+  btn.disabled = false; btn.textContent = 'Parse resume';
+});
+
+function splitCommaList(str) { return (str || '').split(',').map(s => s.trim()).filter(Boolean); }
+
+$('#saveProfileBtn').addEventListener('click', async () => {
+  const titles = splitCommaList($('#f_titles').value);
+  if (!titles.length) { showToast('Add at least one target job title.', true); return; }
+  const body = {
+    resume_token: pendingResumeToken,
+    name: $('#f_name').value.trim(), phone: $('#f_phone').value.trim(),
+    linkedin: $('#f_linkedin').value.trim(), location: $('#f_location').value.trim(),
+    years_experience: parseInt($('#f_years').value) || 0, target_titles: titles,
+    must_have_skills: splitCommaList($('#f_skills').value),
+    nice_to_have_skills: splitCommaList($('#f_nice_skills').value),
+    remote_first: $('#f_remote_first').checked,
+    acceptable_locations: splitCommaList($('#f_locations').value),
+    ats_min_score: parseInt($('#f_ats_min').value) || 90,
+  };
+  const btn = $('#saveProfileBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const res = await fetch('/api/save_profile', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (data.error) { showToast(data.error, true); }
+    else { showToast('Profile saved!'); loadStatus(); switchTab('search'); }
+  } catch (e) { showToast('Could not save profile.', true); }
+  btn.disabled = false; btn.textContent = 'Save profile & continue';
+});
+
+$('#saveGmailBtn').addEventListener('click', async () => {
+  const body = {
+    gmail_email: $('#f_gmail_email').value.trim(),
+    gmail_app_password: $('#f_gmail_password').value.trim(),
+    send_emails_enabled: $('#f_send_enabled').checked,
+  };
+  try {
+    const res = await fetch('/api/save_gmail_settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (data.error) { showToast(data.error, true); }
+    else { showToast('Email settings saved.'); $('#f_gmail_password').value = ''; loadStatus(); }
+  } catch (e) { showToast('Could not save email settings.', true); }
+});
+
+let currentJobs = [];
+function renderJobs(jobs) {
+  currentJobs = jobs;
+  const list = $('#jobList');
+  list.innerHTML = '';
+  $('#emptyState').style.display = jobs.length ? 'none' : 'block';
+
+  jobs.forEach(job => {
+    const div = document.createElement('div');
+    const decision = job.decision || 'skip';
+    div.className = 'job-row' + (decision === 'approve' ? ' approved' : decision === 'reject' ? ' rejected' : '');
+    const scorePct = Math.round((job.match_score || 0) * 100);
+    const desc = (job.description || '').replace(/\s+/g, ' ').slice(0, 220);
+    div.innerHTML = `
+      <div class="score-col">${scorePct}</div>
+      <div class="job-content">
+        <div class="job-top">
+          <div><span class="job-title">${escapeHtml(job.title)}</span><span class="job-company"> — ${escapeHtml(job.company)}</span></div>
+        </div>
+        <div class="job-meta">${escapeHtml(job.location || '')}${job.remote ? ', Remote' : ''}, source: ${escapeHtml(job.source || '')}</div>
+        <div class="job-desc">${escapeHtml(desc)}${desc.length === 220 ? '…' : ''}</div>
+        <div class="job-bottom">
+          <a class="job-link" href="${job.url}" target="_blank" rel="noopener">View posting</a>
+          <div class="segmented">
+            <button class="sel-approve ${decision === 'approve' ? 'active' : ''}" data-decision="approve">Approve</button>
+            <button class="sel-reject ${decision === 'reject' ? 'active' : ''}" data-decision="reject">Reject</button>
+            <button class="sel-skip ${decision === 'skip' ? 'active' : ''}" data-decision="skip">Skip</button>
           </div>
         </div>
+      </div>`;
+    div.querySelectorAll('.segmented button').forEach(btn => {
+      btn.addEventListener('click', () => decide(job.job_posting_id, btn.dataset.decision, div, job));
+    });
+    list.appendChild(div);
+  });
+  updateApplyBar();
+}
 
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-          <div>
-            <label style="font-size: 0.8rem; font-weight: 600; color: #cbd5e1; display: block; margin-bottom: 4px;">Preferred Indian Locations (Comma separated)</label>
-            <input type="text" id="target-locations" class="form-input" value="India, Bangalore, Mumbai, Gurgaon, Hyderabad, Noida, Pune, Ahmedabad">
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px; margin-top: 1.5rem;">
-            <input type="checkbox" id="remote-first" checked style="width: 18px; height: 18px; accent-color: var(--primary);">
-            <label for="remote-first" style="font-size: 0.88rem; color: #cbd5e1; cursor: pointer;">Include Remote Roles</label>
-          </div>
+function updateApplyBar() {
+  const approved = currentJobs.filter(j => j.decision === 'approve');
+  const bar = $('#applyBar');
+  if (approved.length > 0) {
+    bar.style.display = 'flex';
+    $('#approvedCount').textContent = `${approved.length} job${approved.length === 1 ? '' : 's'} approved and ready to apply`;
+  } else { bar.style.display = 'none'; }
+}
+
+async function decide(jobPostingId, decision, cardEl, job) {
+  job.decision = decision;
+  cardEl.classList.remove('approved', 'rejected');
+  if (decision === 'approve') cardEl.classList.add('approved');
+  if (decision === 'reject') cardEl.classList.add('rejected');
+  cardEl.querySelectorAll('.segmented button').forEach(b => b.classList.toggle('active', b.dataset.decision === decision));
+  updateApplyBar();
+  try {
+    await fetch('/api/decide', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ job_posting_id: jobPostingId, decision }) });
+  } catch (e) { showToast('Could not save decision.', true); }
+}
+
+$('#searchBtn').addEventListener('click', async () => {
+  const btn = $('#searchBtn');
+  btn.disabled = true; btn.textContent = 'Searching…';
+  try {
+    const res = await fetch('/api/search', { method: 'POST' });
+    const data = await res.json();
+    if (data.error) { showToast('Search failed: ' + data.error, true); }
+    else {
+      $('#searchSummary').textContent = `${data.considered} postings considered, ${data.matched} matched this run`;
+      renderJobs(data.jobs);
+      showToast(`Found ${data.matched} new match(es).`);
+    }
+  } catch (e) { showToast('Search failed.', true); }
+  btn.disabled = false; btn.textContent = 'Search for new jobs';
+});
+
+$('#applyBtn').addEventListener('click', async () => {
+  const btn = $('#applyBtn');
+  btn.disabled = true; btn.textContent = 'Applying…';
+  try {
+    const res = await fetch('/api/apply', { method: 'POST' });
+    const data = await res.json();
+    if (data.error) { showToast('Apply failed: ' + data.error, true); }
+    else {
+      const n = data.results.length;
+      showToast(n ? `Processed ${n} application(s). See the Applications tab.` : (data.message || 'Nothing to apply.'));
+      await loadJobs();
+    }
+  } catch (e) { showToast('Apply failed.', true); }
+  btn.disabled = false; btn.textContent = 'Apply to approved jobs';
+});
+
+async function loadJobs() {
+  try {
+    const res = await fetch('/api/jobs');
+    const data = await res.json();
+    renderJobs(data.jobs || []);
+  } catch (e) {}
+}
+
+async function loadTailoredResumes() {
+  try {
+    const res = await fetch('/api/tailored_resumes');
+    const data = await res.json();
+    const list = $('#resumeList');
+    list.innerHTML = '';
+    $('#resumeEmpty').style.display = data.resumes.length ? 'none' : 'block';
+    data.resumes.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'resume-card';
+      const chips = (r.added_keywords || []).map(k => `<span class="chip">${escapeHtml(k)}</span>`).join('');
+      div.innerHTML = `
+        <div class="resume-top">
+          <div><span class="job-title">${escapeHtml(r.title)}</span><span class="job-company"> — ${escapeHtml(r.company)}</span></div>
+          <span class="score-arrow"><span class="before">${r.base_ats_score}%</span> &rarr; <span class="after">${r.ats_score}%</span></span>
         </div>
-
-        <h4 style="font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Extracted Skills</h4>
-        <div id="skills-list" class="skills-container"></div>
-
-        <button type="button" id="save-profile-btn" class="btn-primary" style="margin-top: 1.25rem;" onclick="saveAndScore()">Score India Pool & Show Opportunities →</button>
-      </div>
-    </div>
-
-    <div class="card" id="match-section" style="display: none;">
-      <h2 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 0.5rem;">Step 2: Scored Opportunities & Resume Tailoring</h2>
-      <p id="match-summary-text" style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 1.5rem;"></p>
-
-      <div id="matches-output">
-        <table class="results-table">
-          <thead>
-            <tr>
-              <th>Role & Organization</th>
-              <th>Location</th>
-              <th>ATS Match Score</th>
-              <th>Resume (.docx)</th>
-              <th>Manual Application</th>
-            </tr>
-          </thead>
-          <tbody id="matches-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </main>
-
-  <script>
-    let activeResumeToken = null;
-    let extractedSkills = [];
-
-    window.addEventListener('DOMContentLoaded', async () => {
-      try {
-        const res = await fetch('/api/status');
-        const data = await res.json();
-        if (data.resume_exists) {
-          document.getElementById('parsed-results').style.display = 'block';
-          if (data.target_titles && data.target_titles.length) {
-            document.getElementById('target-titles').value = data.target_titles.join(', ');
-          }
-        }
-      } catch (e) {
-        console.error('Could not load status:', e);
-      }
+        <div class="keyword-chips">${chips || '<span style="color:var(--muted); font-size:12.5px;">No keywords recorded</span>'}</div>
+        <div class="resume-bottom">
+          <a class="job-link" href="${r.url}" target="_blank" rel="noopener">View posting</a>
+          <a href="/api/download_resume/${r.id}"><button class="primary small">Download tailored resume</button></a>
+        </div>`;
+      list.appendChild(div);
     });
+  } catch (e) { showToast('Could not load tailored resumes.', true); }
+}
 
-    async function handleLogout() {
-      try {
-        await fetch('/api/logout', { method: 'POST' });
-      } catch (err) {
-        console.error('Logout error:', err);
-      } finally {
-        window.location.href = '/login';
-      }
+function resumeDownloadCell(row) {
+  if (!row.was_tailored) return '<span style="color:var(--muted); font-size:12.5px;">Base resume</span>';
+  return `<a href="/api/download_resume/${row.id}">Download tailored</a>`;
+}
+
+async function loadDashboard() {
+  try {
+    const res = await fetch('/api/dashboard');
+    const data = await res.json();
+    const s = data.summary;
+    const stats = [
+      ['Total applications', s.total], ['Emails sent', s.sent],
+      ['Ready to apply manually', s.manual_pending],
+      ['Tailored resumes', s.tailored_count],
+      ['Avg. ATS score', s.avg_ats_score !== null ? s.avg_ats_score + '%' : '—'],
+    ];
+    $('#statsRow').innerHTML = stats.map(([label, num]) => `<div class="stat"><div class="num">${num}</div><div class="label">${label}</div></div>`).join('');
+
+    const tbody = $('#appTableBody');
+    tbody.innerHTML = '';
+    if (!data.rows.length) { $('#dashEmpty').style.display = 'block'; }
+    else {
+      $('#dashEmpty').style.display = 'none';
+      data.rows.forEach(r => {
+        const tr = document.createElement('tr');
+        let badgeClass = 'manual', badgeText = 'Apply manually';
+        if (r.apply_method === 'email') { badgeClass = 'sent'; badgeText = 'Sent'; }
+        else if (r.apply_method === 'email_draft') { badgeClass = 'draft'; badgeText = 'Draft saved'; }
+        else if (r.apply_method === 'email_failed') { badgeClass = 'failed'; badgeText = 'Send failed'; }
+        tr.innerHTML = `
+          <td>${escapeHtml((r.applied_at || '').slice(0,10))}</td>
+          <td>${escapeHtml(r.title)}</td>
+          <td>${escapeHtml(r.company)}</td>
+          <td>${escapeHtml(r.apply_method)}</td>
+          <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+          <td>${r.ats_score ? r.ats_score + '%' : '—'}</td>
+          <td>${r.url ? `<a href="${r.url}" target="_blank" rel="noopener">Open</a>` : '—'}</td>
+          <td>${resumeDownloadCell(r)}</td>`;
+        tbody.appendChild(tr);
+      });
     }
+  } catch (e) { showToast('Could not load dashboard.', true); }
+}
 
-    document.getElementById('resume-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const fileInput = document.getElementById('resume-file');
-      const parseBtn = document.getElementById('parse-btn');
-      const statusBox = document.getElementById('status-box');
-      
-      if (!fileInput.files.length) return;
-
-      const formData = new FormData();
-      formData.append('resume', fileInput.files[0]);
-
-      parseBtn.disabled = true;
-      parseBtn.innerText = 'Parsing Resume...';
-      statusBox.style.display = 'block';
-      statusBox.style.background = 'rgba(99, 102, 241, 0.15)';
-      statusBox.style.color = '#c7d2fe';
-      statusBox.innerText = 'Extracting resume skills & background...';
-
-      try {
-        const res = await fetch('/api/parse_resume', { method: 'POST', body: formData });
-        const data = await res.json();
-
-        if (res.ok) {
-          activeResumeToken = data.resume_token;
-          extractedSkills = data.suggested_skills || [];
-          
-          statusBox.style.background = 'rgba(16, 185, 129, 0.15)';
-          statusBox.style.color = '#6ee7b7';
-          statusBox.innerText = `Successfully parsed ${data.resume_filename}!`;
-
-          document.getElementById('target-titles').value = (data.suggested_titles || []).join(', ');
-          document.getElementById('years-exp').value = data.suggested_years_experience || 0;
-          
-          const skillsDiv = document.getElementById('skills-list');
-          skillsDiv.innerHTML = '';
-          extractedSkills.forEach(skill => {
-            const chip = document.createElement('span');
-            chip.className = 'skill-chip';
-            chip.innerText = skill;
-            skillsDiv.appendChild(chip);
-          });
-
-          document.getElementById('parsed-results').style.display = 'block';
-        } else {
-          statusBox.style.background = 'rgba(239, 68, 68, 0.15)';
-          statusBox.style.color = '#fca5a5';
-          statusBox.innerText = data.error || 'Failed to parse resume.';
-        }
-      } catch (err) {
-        statusBox.style.background = 'rgba(239, 68, 68, 0.15)';
-        statusBox.style.color = '#fca5a5';
-        statusBox.innerText = 'Network error while parsing.';
-      } finally {
-        parseBtn.disabled = false;
-        parseBtn.innerText = 'Parse Resume';
-      }
-    });
-
-    async function saveAndScore() {
-      const btn = document.getElementById('save-profile-btn');
-      const targetTitlesRaw = document.getElementById('target-titles').value;
-      const targetTitles = targetTitlesRaw.split(',').map(t => t.trim()).filter(Boolean);
-      const yearsExp = parseInt(document.getElementById('years-exp').value, 10) || 0;
-      const targetAts = parseInt(document.getElementById('ats-min-score').value, 10) || 80;
-
-      const locsRaw = document.getElementById('target-locations').value;
-      const locations = locsRaw.split(',').map(l => l.trim()).filter(Boolean);
-      const remoteFirst = document.getElementById('remote-first').checked;
-
-      btn.disabled = true;
-      btn.innerText = 'Scoring India Pool...';
-
-      try {
-        const saveRes = await fetch('/api/save_profile', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            resume_token: activeResumeToken,
-            target_titles: targetTitles.length ? targetTitles : ["Customer Success Manager"],
-            must_have_skills: extractedSkills,
-            years_experience: yearsExp,
-            ats_min_score: 30,
-            acceptable_locations: locations,
-            remote_first: remoteFirst
-          })
-        });
-
-        if (!saveRes.ok) {
-          const saveErr = await saveRes.json();
-          alert(saveErr.error || 'Failed to save criteria.');
-          return;
-        }
-
-        const matchRes = await fetch('/api/search', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
-        });
-        
-        if (!matchRes.ok) {
-          const matchErr = await matchRes.json();
-          alert(matchErr.error || 'Failed to score pool jobs.');
-          return;
-        }
-
-        const matchData = await matchRes.json();
-        const tbody = document.getElementById('matches-tbody');
-        tbody.innerHTML = '';
-        document.getElementById('match-section').style.display = 'block';
-
-        if (matchData.jobs && matchData.jobs.length > 0) {
-          document.getElementById('match-summary-text').innerText = `Fetched ${matchData.jobs.length} matching positions. Click 'Approve & Inject Keywords' on any vacancy to generate a bespoke tailored .docx resume.`;
-          
-          matchData.jobs.forEach((job) => {
-            const rawScore = job.ats_score || job.base_ats_score || 60;
-            const isAboveTarget = rawScore >= targetAts;
-            const scoreClass = isAboveTarget ? 'score-matched' : 'score-low';
-            
-            const jobId = job.id || job.job_posting_id;
-            if (!jobId) return;
-
-            const row = document.createElement('tr');
-            row.id = `job-row-${jobId}`;
-            
-            const isTailored = Boolean(job.was_tailored || (job.decision_id && job.was_tailored === 1));
-
-            const resumeButtonHtml = (job.decision_id && isTailored)
-              ? `<a href="/api/download_resume/${job.decision_id}" class="btn-secondary btn-download" download>📄 Download .docx</a>`
-              : `<button type="button" class="btn-secondary btn-tailor" onclick="tailorAndApprove(${jobId}, ${targetAts})">✨ Approve & Inject Keywords</button>`;
-
-            row.innerHTML = `
-              <td>
-                <div style="font-weight: 700; color: var(--text);">${job.title}</div>
-                <div style="font-size: 0.82rem; color: var(--text-muted);">${job.company}</div>
-              </td>
-              <td style="color: var(--text-muted);">${job.location}</td>
-              <td><span id="score-val-${jobId}" class="score-badge ${scoreClass}">${rawScore}% ATS</span></td>
-              <td id="resume-cell-${jobId}">
-                ${resumeButtonHtml}
-              </td>
-              <td>
-                <a href="${job.url}" target="_blank" class="btn-secondary" style="background: rgba(99, 102, 241, 0.25); color: #e0e7ff;" onclick="recordApply(${jobId})">
-                  Apply on Job Site ↗
-                </a>
-              </td>
-            `;
-            tbody.appendChild(row);
-          });
-        } else {
-          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--text-muted); padding: 2rem;">No jobs found matching criteria.</td></tr>`;
-        }
-      } catch (err) {
-        alert('Network error while communicating with server.');
-      } finally {
-        btn.disabled = false;
-        btn.innerText = 'Score India Pool & Show Opportunities →';
-      }
-    }
-
-    async function tailorAndApprove(jobId, targetAts) {
-      if (!jobId) {
-        alert('Invalid Job ID');
-        return;
-      }
-
-      const cell = document.getElementById(`resume-cell-${jobId}`);
-      cell.innerHTML = `<span style="font-size:0.8rem; color:var(--accent);">Injecting keywords into .docx...</span>`;
-
-      try {
-        const res = await fetch('/api/tailor_and_approve', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ job_id: jobId, target_ats: targetAts })
-        });
-        
-        const data = await res.json();
-
-        if (res.ok && data.ok && data.download_url) {
-          const scoreBadge = document.getElementById(`score-val-${jobId}`);
-          if (scoreBadge) {
-            scoreBadge.className = 'score-badge score-matched';
-            scoreBadge.innerText = `${data.ats_score}% ATS (Tailored)`;
-          }
-          cell.innerHTML = `<a href="${data.download_url}" class="btn-secondary btn-download" download>📄 Download Tailored .docx</a>`;
-        } else {
-          cell.innerHTML = `<span style="font-size:0.8rem; color:#fca5a5;">${data.error || 'Failed to tailor.'}</span>`;
-        }
-      } catch (e) {
-        cell.innerHTML = `<span style="font-size:0.8rem; color:#fca5a5;">Network error.</span>`;
-      }
-    }
-
-    async function recordApply(jobId) {
-      try {
-        await fetch('/api/decide', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ job_posting_id: jobId, decision: 'approve' })
-        });
-      } catch (e) {
-        console.error(e);
-      }
-    }
-  </script>
+loadMe();
+loadStatus();
+loadJobs();
+</script>
 </body>
 </html>

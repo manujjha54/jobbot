@@ -1,481 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JobBot | Smarter resumes. Faster applications. Zero hassle.</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg: #0b0f19;
-      --card-bg: rgba(17, 24, 39, 0.75);
-      --card-border: rgba(255, 255, 255, 0.08);
-      --primary: #6366f1;
-      --primary-gradient: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
-      --accent: #06b6d4;
-      --accent-glow: rgba(6, 182, 212, 0.15);
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --input-bg: rgba(15, 23, 42, 0.65);
-      --radius-lg: 20px;
-      --radius-md: 12px;
-      --radius-sm: 8px;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background-color: var(--bg);
-      background-image: 
-        radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 40%),
-        radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 40%);
-      color: var(--text);
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Header with Logo & Sub-tagline */
-    header {
-      padding: 1.75rem 2.5rem;
-      display: flex;
-      align-items: center;
-      border-bottom: 1px solid var(--card-border);
-      background: rgba(11, 15, 25, 0.8);
-      backdrop-filter: blur(12px);
-    }
-
-    .brand-group {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      text-decoration: none;
-    }
-
-    .logo-badge {
-      width: 44px;
-      height: 44px;
-      background: var(--primary-gradient);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
-      flex-shrink: 0;
-    }
-
-    .logo-text-group {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .logo-title {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 1.45rem;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.5px;
-      line-height: 1.1;
-    }
-
-    .logo-tagline {
-      font-size: 0.82rem;
-      color: var(--accent);
-      font-weight: 500;
-      letter-spacing: 0.2px;
-    }
-
-    /* Main Content Layout */
-    .main-wrapper {
-      max-width: 1200px;
-      width: 100%;
-      margin: auto;
-      padding: 2.5rem 1.5rem;
-      display: grid;
-      grid-template-columns: 1.15fr 0.85fr;
-      gap: 3rem;
-      align-items: center;
-    }
-
-    @media (max-width: 900px) {
-      .main-wrapper {
-        grid-template-columns: 1fr;
-        gap: 2rem;
-      }
-    }
-
-    /* Left: Integrated Product Showcase Deck */
-    .deck-section {
-      display: flex;
-      flex-direction: column;
-      gap: 1.75rem;
-    }
-
-    .deck-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 14px;
-      background: var(--accent-glow);
-      border: 1px solid rgba(6, 182, 212, 0.25);
-      border-radius: 50px;
-      color: var(--accent);
-      font-size: 0.82rem;
-      font-weight: 600;
-      width: fit-content;
-    }
-
-    .deck-headline {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 2.4rem;
-      font-weight: 700;
-      line-height: 1.2;
-      letter-spacing: -0.8px;
-    }
-
-    .deck-headline span {
-      background: var(--primary-gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    /* Native Interactive Deck Carousel */
-    .deck-slider-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius-lg);
-      padding: 2rem;
-      backdrop-filter: blur(16px);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-      position: relative;
-      overflow: hidden;
-      min-height: 230px;
-    }
-
-    .deck-slide {
-      display: none;
-      animation: fadeIn 0.4s ease-in-out forwards;
-    }
-
-    .deck-slide.active {
-      display: block;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .slide-step {
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--accent);
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-    }
-
-    .slide-title {
-      font-size: 1.3rem;
-      font-weight: 700;
-      margin-bottom: 0.75rem;
-      color: var(--text);
-    }
-
-    .slide-desc {
-      color: var(--text-muted);
-      font-size: 0.95rem;
-      line-height: 1.6;
-    }
-
-    .deck-controls {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 1.5rem;
-      padding-top: 1.25rem;
-      border-top: 1px solid var(--card-border);
-    }
-
-    .deck-dots {
-      display: flex;
-      gap: 8px;
-    }
-
-    .deck-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.2);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .deck-dot.active {
-      width: 24px;
-      border-radius: 4px;
-      background: var(--accent);
-    }
-
-    .deck-nav-btn {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid var(--card-border);
-      color: var(--text);
-      padding: 6px 14px;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      font-size: 0.85rem;
-      font-weight: 600;
-      transition: background 0.2s;
-    }
-
-    .deck-nav-btn:hover {
-      background: rgba(255, 255, 255, 0.12);
-    }
-
-    /* Right: Login Card */
-    .login-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius-lg);
-      padding: 2.5rem;
-      backdrop-filter: blur(20px);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-    }
-
-    .login-card h2 {
-      font-size: 1.65rem;
-      font-weight: 700;
-      margin-bottom: 0.35rem;
-      letter-spacing: -0.4px;
-    }
-
-    .login-card p {
-      color: var(--text-muted);
-      font-size: 0.9rem;
-      margin-bottom: 1.75rem;
-    }
-
-    .form-group {
-      margin-bottom: 1.25rem;
-    }
-
-    label {
-      display: block;
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: #cbd5e1;
-      margin-bottom: 6px;
-    }
-
-    input[type="email"], input[type="password"] {
-      width: 100%;
-      padding: 12px 16px;
-      background: var(--input-bg);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius-sm);
-      color: var(--text);
-      font-size: 0.95rem;
-      outline: none;
-      transition: all 0.2s ease;
-    }
-
-    input:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
-    }
-
-    .btn-submit {
-      width: 100%;
-      padding: 13px;
-      background: var(--primary-gradient);
-      border: none;
-      border-radius: var(--radius-sm);
-      color: white;
-      font-size: 0.98rem;
-      font-weight: 700;
-      cursor: pointer;
-      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
-      transition: opacity 0.2s;
-      margin-top: 0.5rem;
-    }
-
-    .btn-submit:hover {
-      opacity: 0.92;
-    }
-
-    .switch-link {
-      text-align: center;
-      margin-top: 1.35rem;
-      font-size: 0.88rem;
-      color: var(--text-muted);
-    }
-
-    .switch-link a {
-      color: var(--accent);
-      text-decoration: none;
-      font-weight: 600;
-    }
-
-    .error-banner {
-      background: rgba(239, 68, 68, 0.15);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      color: #fca5a5;
-      padding: 10px 14px;
-      border-radius: var(--radius-sm);
-      font-size: 0.88rem;
-      margin-bottom: 1.25rem;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log in — Job Search Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #16243F; --indigo: #4F46E5; --violet: #7C3AED; --brass: #B37B2E;
+    --paper: #F6F5F1; --panel: #FFFFFF; --line: #DAD5C8; --muted: #6E6A5E; --reject: #8C3B32;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif; background: var(--paper); color: var(--ink);
+    display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0;
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); width: 380px; padding: 36px 36px 32px;
+    position: relative;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--indigo), var(--violet));
+  }
+  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 26px; }
+  .wordmark { font-family: 'Source Serif 4', serif; font-size: 20px; font-weight: 700; color: var(--ink); line-height: 1.1; }
+  .tagline { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  h1 {
+    font-family: 'Source Serif 4', serif; font-size: 17px; font-weight: 600; margin: 0 0 22px;
+    letter-spacing: -0.01em; color: var(--ink);
+  }
+  label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; color: var(--ink); }
+  input {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); background: var(--paper);
+    font-size: 14px; font-family: inherit; margin-bottom: 16px; color: var(--ink);
+  }
+  input:focus { outline: 2px solid var(--indigo); outline-offset: -1px; background: white; }
+  button {
+    width: 100%; background: var(--ink); color: white; border: none; padding: 12px;
+    font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  button:hover { background: #0E1929; }
+  .error {
+    color: var(--reject); font-size: 13px; margin-bottom: 14px; display: none;
+    padding: 8px 10px; background: #FBF0EE; border-left: 2px solid var(--reject);
+  }
+  .footer-link { text-align: center; font-size: 13px; margin-top: 20px; color: var(--muted); }
+  .footer-link a { color: var(--indigo); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+</style>
 </head>
 <body>
-
-  <!-- Top Header with Tagline directly below logo -->
-  <header>
-    <div class="brand-group">
-      <div class="logo-badge">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-          <circle cx="12" cy="12" r="3"/>
-        </svg>
-      </div>
-      <div class="logo-text-group">
-        <div class="logo-title">JobBot</div>
-        <div class="logo-tagline">Smarter resumes. Faster applications. Zero hassle.</div>
-      </div>
+<div class="card">
+  <div class="brand">
+    <svg width="38" height="38" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="36" height="36" rx="9" fill="url(#logoGrad)"/>
+      <path d="M12 9h8l4 4v13a1 1 0 0 1-1 1H12a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1z" fill="white"/>
+      <path d="M20 9l4 4h-4z" fill="#D7D3FF"/>
+      <path d="M14.5 19.5l3 3 6-6" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <defs>
+        <linearGradient id="logoGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#4F46E5"/>
+          <stop offset="1" stop-color="#7C3AED"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <div>
+      <div class="wordmark">jobbot</div>
+      <div class="tagline">Smarter resumes. Faster applications. Zero hassle.</div>
     </div>
-  </header>
-
-  <main class="main-wrapper">
-    <!-- Seamless Integrated Deck Section -->
-    <div class="deck-section">
-      <div class="deck-badge">✦ Automated Job Pipeline</div>
-      <h1 class="deck-headline">Transform how you apply with <span>intelligent automation</span>.</h1>
-
-      <div class="deck-slider-card">
-        <!-- Slide 1 -->
-        <div class="deck-slide active" data-slide="0">
-          <div class="slide-step">Phase 01 &bull; Profile Ingestion</div>
-          <div class="slide-title">Upload & Deep Parse</div>
-          <div class="slide-desc">Upload your resume once. JobBot extracts your core skills, experience depth, and domain focus into an ATS-optimized candidate profile.</div>
-        </div>
-
-        <!-- Slide 2 -->
-        <div class="deck-slide" data-slide="1">
-          <div class="slide-step">Phase 02 &bull; Match Engine</div>
-          <div class="slide-title">Local Pool Scoring</div>
-          <div class="slide-desc">The match engine compares open listings against your profile instantly, scoring relevance and surfacing high-probability roles.</div>
-        </div>
-
-        <!-- Slide 3 -->
-        <div class="deck-slide" data-slide="2">
-          <div class="slide-step">Phase 03 &bull; AI Tailoring</div>
-          <div class="slide-title">Targeted Cover Letters & Resumes</div>
-          <div class="slide-desc">Generate tailored cover letters and resume bullet adaptations targeted directly at keyword requirements for each role.</div>
-        </div>
-
-        <!-- Slide 4 -->
-        <div class="deck-slide" data-slide="3">
-          <div class="slide-step">Phase 04 &bull; Dispatch</div>
-          <div class="slide-title">Automated Application Tracking</div>
-          <div class="slide-desc">Dispatch your application and monitor deliverability, match scores, and status across all your applications in one view.</div>
-        </div>
-
-        <!-- Slide Navigation Controls -->
-        <div class="deck-controls">
-          <div class="deck-dots">
-            <div class="deck-dot active" onclick="showSlide(0)"></div>
-            <div class="deck-dot" onclick="showSlide(1)"></div>
-            <div class="deck-dot" onclick="showSlide(2)"></div>
-            <div class="deck-dot" onclick="showSlide(3)"></div>
-          </div>
-          <button class="deck-nav-btn" onclick="nextSlide()">Next Step →</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Login Authentication Section -->
-    <div class="login-card">
-      <h2>Welcome Back</h2>
-      <p>Log in to access your tailored job stream & tracker.</p>
-
-      {% if error %}
-        <div class="error-banner">{{ error }}</div>
-      {% endif %}
-
-      <div id="error-banner" class="error-banner" style="display: none;"></div>
-
-      <form id="login-form">
-        <div class="form-group">
-          <label>Email Address</label>
-          <input type="email" id="email" name="email" placeholder="name@company.com" required>
-        </div>
-
-        <div class="form-group">
-          <label>Password</label>
-          <input type="password" id="password" name="password" placeholder="••••••••" required>
-        </div>
-
-        <button type="submit" class="btn-submit">Sign In</button>
-      </form>
-
-      <div class="switch-link">
-        Don't have an account? <a href="/signup">Create an account</a>
-      </div>
-    </div>
-  </main>
-
-  <script>
-    let currentSlide = 0;
-    const slides = document.querySelectorAll('.deck-slide');
-    const dots = document.querySelectorAll('.deck-dot');
-
-    function showSlide(index) {
-      slides[currentSlide].classList.remove('active');
-      dots[currentSlide].classList.remove('active');
-      currentSlide = index;
-      slides[currentSlide].classList.add('active');
-      dots[currentSlide].classList.add('active');
-    }
-
-    function nextSlide() {
-      const nextIndex = (currentSlide + 1) % slides.length;
-      showSlide(nextIndex);
-    }
-
-    // Auto-advance slides every 5 seconds
-    setInterval(nextSlide, 5000);
-  // Login Form Submission Handler
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      const errBanner = document.getElementById('error-banner');
-      
-      try {
-        const res = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
-        const data = await res.json();
-        
-        if (res.ok && data.ok) {
-          window.location.href = data.redirect || '/';
-        } else {
-          errBanner.innerText = data.error || 'Invalid email or password.';
-          errBanner.style.display = 'block';
-        }
-      } catch (err) {
-        errBanner.innerText = 'Connection error. Please try again.';
-        errBanner.style.display = 'block';
-      }
+  </div>
+  <h1>Log in to your account</h1>
+  <div class="error" id="err"></div>
+  <label for="email">Email</label>
+  <input type="email" id="email" autocomplete="email">
+  <label for="password">Password</label>
+  <input type="password" id="password" autocomplete="current-password">
+  <button id="loginBtn">Log in</button>
+  <div class="footer-link">No account yet? <a href="/signup">Sign up</a></div>
+</div>
+<script>
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const err = document.getElementById('err');
+  err.style.display = 'none';
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email, password})
     });
-  </script>
-
+    const data = await res.json();
+    if (data.error) { err.textContent = data.error; err.style.display = 'block'; }
+    else { window.location.href = '/'; }
+  } catch (e) { err.textContent = 'Something went wrong. Try again.'; err.style.display = 'block'; }
+});
+document.getElementById('password').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('loginBtn').click();
+});
+</script>
 </body>
 </html>

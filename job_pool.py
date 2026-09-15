@@ -1,181 +1,105 @@
 """
 job_pool.py
-Fetches, cleans, and stores job postings in the central pool database.
-Integrates directly with Adzuna API (India region) and RemoteOK with fallback
-grace handling to ensure uninterrupted pool refreshes.
+Maintains ONE shared pool of job postings that every user matches against.
+This is the actual fix for the "many users, one Adzuna quota" problem: the
+number of external API calls depends only on how often the pool is
+refreshed (admin-triggered or on a timer), never on how many users are
+active or how often they click "Search".
 """
 
 import os
-import re
-import requests
+import json
+from datetime import datetime
+
 from db import db_session
+from search_jobs import search_all
 
-# Adzuna API Credentials
-ADZUNA_APP_ID = os.environ.get("ADZUNA_APP_ID", "cbc3ef31").strip()
-ADZUNA_APP_KEY = os.environ.get("ADZUNA_APP_KEY", "04ec98c5e90e30153c22397115bf2f01").strip()
-
-
-def clean_html(text: str) -> str:
-    """Removes HTML markup tags returned by job board snippets."""
-    if not text:
-        return ""
-    clean = re.sub(r"<[^>]+>", "", text)
-    return " ".join(clean.split())
-
-
-def pool_size() -> int:
-    """Returns total active job postings in the shared database pool."""
-    with db_session() as conn:
-        row = conn.execute("SELECT COUNT(*) as count FROM job_postings").fetchone()
-        return row["count"] if row else 0
-
-
-def fetch_adzuna_india() -> list:
-    """Queries Adzuna India (in) endpoint for relevant SaaS/Tech roles."""
-    if not (ADZUNA_APP_ID and ADZUNA_APP_KEY):
-        return []
-
-    url = "https://api.adzuna.com/v1/api/jobs/in/search/1"
-    
-    # Target high-demand keyword variations in India
-    search_queries = [
-        "Customer Success Manager",
-        "Onboarding Specialist",
-        "Implementation Lead",
-        "Technical Account Manager"
-    ]
-    
-    collected_jobs = []
-
-    for query in search_queries:
-        params = {
-            "app_id": ADZUNA_APP_ID,
-            "app_key": ADZUNA_APP_KEY,
-            "results_per_page": 50,
-            "what": query,
-            "content-type": "application/json"
-        }
+# A generic profile just wide enough to pull a broad, varied pool of
+# postings. Individual relevance is decided later, per-user, in matching.py -
+# this only needs to cast a reasonably wide net.
+def _aggregate_target_titles(conn):
+    rows = conn.execute("SELECT target_titles FROM profiles WHERE target_titles != '[]'").fetchall()
+    titles = set()
+    for row in rows:
         try:
-            resp = requests.get(url, params=params, timeout=12)
-            if resp.status_code == 200:
-                data = resp.json()
-                for item in data.get("results", []):
-                    title = clean_html(item.get("title", ""))
-                    company = (item.get("company") or {}).get("display_name", "Direct Employer")
-                    location_area = (item.get("location") or {}).get("display_name", "India")
-                    desc = clean_html(item.get("description", ""))
-                    redirect_url = item.get("redirect_url", "#")
-
-                    if title:
-                        collected_jobs.append({
-                            "title": title,
-                            "company": company,
-                            "location": location_area,
-                            "description": desc,
-                            "url": redirect_url
-                        })
-        except Exception as e:
-            print(f"Error querying Adzuna for '{query}': {e}")
+            for t in json.loads(row["target_titles"]):
+                titles.add(t)
+        except (json.JSONDecodeError, TypeError):
             continue
+    return list(titles) if titles else ["Customer Success Manager"]  # sane fallback if no users yet
 
-    return collected_jobs
 
-
-def fetch_remoteok_jobs() -> list:
-    """Queries RemoteOK for remote Customer Success / Implementation roles."""
-    url = "https://remoteok.com/api"
-    headers = {
-        "User-Agent": "JobBot-ATS-Ingester/2.0 (manujjha54@gmail.com)"
+def _server_config():
+    return {
+        "adzuna": {
+            "app_id": os.environ.get("ADZUNA_APP_ID", ""),
+            "app_key": os.environ.get("ADZUNA_APP_KEY", ""),
+            "countries": os.environ.get("ADZUNA_COUNTRIES", "in,gb,us").split(","),
+            "results_per_query": 20,
+        },
+        "remoteok": {"enabled": True},
     }
-    jobs = []
+
+
+def refresh_job_pool():
+    """
+    Pulls fresh postings from every configured source and upserts them into
+    the shared job_postings table. Safe to call repeatedly - postings are
+    deduped by their source id, so re-running just refreshes fetched_at for
+    ones that are still live and adds ones that are new.
+    """
+    started_at = datetime.utcnow().isoformat()
+    with db_session() as conn:
+        target_titles = _aggregate_target_titles(conn)
+
+    profile_stub = {"target_titles": target_titles}
+    config = _server_config()
+
     try:
-        resp = requests.get(url, headers=headers, timeout=12)
-        if resp.status_code == 200:
-            data = resp.json()
-            # Skip first element (metadata notice)
-            for item in data[1:]:
-                if isinstance(item, dict):
-                    title = item.get("position", "")
-                    tags = " ".join(item.get("tags", []))
-                    
-                    # Filter for Customer Success / Onboarding / Account / Support roles
-                    if any(k in f"{title} {tags}".lower() for k in ["customer", "success", "onboarding", "implementation", "support", "account"]):
-                        jobs.append({
-                            "title": title,
-                            "company": item.get("company", "Tech Company"),
-                            "location": item.get("location") or "Remote",
-                            "description": clean_html(item.get("description", "")),
-                            "url": item.get("url", "#")
-                        })
+        raw_jobs = search_all(profile_stub, config)
     except Exception as e:
-        print(f"RemoteOK fetch error: {e}")
-
-    return jobs
-
-
-def refresh_pool() -> tuple[int, int]:
-    """
-    Refreshes database job pool from external APIs.
-    Returns (total_fetched_count, newly_inserted_count).
-    """
-    all_jobs = []
-
-    # 1. Fetch Adzuna India postings
-    adzuna_jobs = fetch_adzuna_india()
-    all_jobs.extend(adzuna_jobs)
-
-    # 2. Fetch Remote postings
-    remote_jobs = fetch_remoteok_jobs()
-    all_jobs.extend(remote_jobs)
-
-    # 3. Fallback seeds if remote endpoints are temporarily throttled
-    if not all_jobs:
-        all_jobs = [
-            {
-                "title": "Senior Customer Success Manager",
-                "company": "Infotech Cloud India",
-                "location": "Bangalore, India",
-                "description": "Lead customer success lifecycle, retention strategy, enterprise onboarding, and quarterly business reviews (QBR).",
-                "url": "https://in.linkedin.com/jobs"
-            },
-            {
-                "title": "Onboarding & Implementation Specialist",
-                "company": "POS Solutions Retail",
-                "location": "Ahmedabad, India",
-                "description": "Configure SaaS workflows, manage POS inventory integration rollouts, and lead technical client enablement.",
-                "url": "https://in.linkedin.com/jobs"
-            },
-            {
-                "title": "Enterprise Implementation Lead",
-                "company": "Vasy Systems",
-                "location": "Mumbai, India",
-                "description": "Drive ERP software deployments, solution architecture, milestone tracking, and stakeholder management.",
-                "url": "https://in.linkedin.com/jobs"
-            },
-            {
-                "title": "Technical Account & Escalations Lead",
-                "company": "Telesoft Technologies",
-                "location": "Remote, India",
-                "description": "Manage key client relationships, platform health diagnostics, SLA metrics, and product adoption roadmaps.",
-                "url": "https://in.linkedin.com/jobs"
-            }
-        ]
+        with db_session() as conn:
+            conn.execute(
+                "INSERT INTO job_pool_refresh_log (started_at, finished_at, raw_count, new_count, error) VALUES (?, ?, ?, ?, ?)",
+                (started_at, datetime.utcnow().isoformat(), 0, 0, str(e)),
+            )
+        raise
 
     new_count = 0
     with db_session() as conn:
-        for j in all_jobs:
-            # Prevent duplicate job inserts based on title + company
-            existing = conn.execute(
-                "SELECT id FROM job_postings WHERE title = ? AND company = ?",
-                (j["title"], j["company"])
-            ).fetchone()
+        for job in raw_jobs:
+            existing = conn.execute("SELECT id FROM job_postings WHERE id = ?", (job["id"],)).fetchone()
+            if existing:
+                conn.execute("UPDATE job_postings SET fetched_at = ? WHERE id = ?",
+                             (datetime.utcnow().isoformat(), job["id"]))
+                continue
+            conn.execute(
+                """INSERT INTO job_postings
+                   (id, source, title, company, location, remote, url, description, posted_date, apply_email)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (job["id"], job["source"], job["title"], job["company"], job["location"],
+                 1 if job.get("remote") else 0, job.get("url"), job.get("description"),
+                 job.get("posted_date"), job.get("apply_email")),
+            )
+            new_count += 1
 
-            if not existing:
-                conn.execute(
-                    """INSERT INTO job_postings (title, company, location, description, url)
-                       VALUES (?, ?, ?, ?, ?)""",
-                    (j["title"], j["company"], j["location"], j["description"], j["url"])
-                )
-                new_count += 1
+        conn.execute(
+            "INSERT INTO job_pool_refresh_log (started_at, finished_at, raw_count, new_count, error) VALUES (?, ?, ?, ?, ?)",
+            (started_at, datetime.utcnow().isoformat(), len(raw_jobs), new_count, None),
+        )
 
-    return len(all_jobs), new_count
+    return {"raw_count": len(raw_jobs), "new_count": new_count}
+
+
+def pool_size():
+    with db_session() as conn:
+        row = conn.execute("SELECT COUNT(*) as n FROM job_postings").fetchone()
+        return row["n"]
+
+
+def last_refresh_info():
+    with db_session() as conn:
+        row = conn.execute(
+            "SELECT * FROM job_pool_refresh_log ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        return dict(row) if row else None

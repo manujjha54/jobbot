@@ -101,17 +101,10 @@ def api_login():
     if not user or not check_password_hash(user["password_hash"], password):
         return jsonify({"error": "Incorrect email or password."}), 401
 
-    is_admin = bool(user["is_admin"])
-    # Auto-promote if the user's email matches ADMIN_EMAIL
-    if ADMIN_EMAIL and user["email"].strip().lower() == ADMIN_EMAIL:
-        is_admin = True
-        with db_session() as conn:
-            conn.execute("UPDATE users SET is_admin = 1 WHERE id = ?", (user["id"],))
-
     session["user_id"] = user["id"]
     session["email"] = user["email"]
-    session["is_admin"] = is_admin
-    return jsonify({"ok": True, "is_admin": is_admin})
+    session["is_admin"] = bool(user["is_admin"])
+    return jsonify({"ok": True, "is_admin": bool(user["is_admin"])})
 
 
 @auth_bp.route("/api/logout", methods=["POST"])

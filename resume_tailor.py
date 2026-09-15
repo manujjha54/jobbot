@@ -1,171 +1,150 @@
 """
 resume_tailor.py
-Tailors DOCX resumes by injecting missing ATS keywords into core competencies,
-skills, and experience sections. Handles both existing DOCX files and dynamically
-creates clean DOCX resumes from extracted text.
+Reads text out of the base resume .docx (for ATS scoring), and - when the
+score is below threshold - produces a tailored copy with missing keywords
+distributed naturally across the existing Core Competencies bullets, so the
+version actually sent for that specific job reads like a normally-written
+resume rather than a resume with a keyword dump bolted on.
+
+This does NOT fabricate experience, invent accomplishments, or change your
+job history. It appends terms to whichever existing skills bullet they
+belong with (tools go with tools, leadership terms go with leadership,
+etc.), extending that bullet's own text so formatting matches exactly.
+
+You should still spot check tailored resumes occasionally (open one from
+resumes_tailored/) to make sure nothing looks off before it goes out.
 """
 
 import io
 import re
 from docx import Document
-from docx.shared import Pt, Inches, RGBColor
 
+# Maps a keyword to the Core Competencies bullet it's most at home in, based
+# on the bullet prefixes used in the base resume (see build_resume.js).
+# Order matters: checked top to bottom, first match wins.
 BUCKET_RULES = [
     ("Platforms & Tooling", [
         "salesforce", "hubspot", "dynamics", "zoho", "gainsight", "churnzero",
         "jira", "confluence", "tableau", "excel", "powerpoint", "outlook",
         "crm", "zendesk", "snowflake", "looker", "slack", "asana", "notion",
-        "workday", "netsuite", "intercom", "freshdesk", "power bi", "sql", "pos",
-        "inventory", "erp", "saas", "api", "analytics"
+        "workday", "netsuite", "intercom", "freshdesk", "power bi", "sql",
     ]),
     ("Leadership & Strategy", [
         "lead", "leadership", "coach", "coaching", "mentor", "mentoring",
         "hire", "hiring", "manage", "management", "escalation", "kpi",
-        "goal", "1:1", "team", "director", "head of", "governance", "enablement",
-        "stakeholder management", "strategy", "operations"
+        "goal", "1:1", "team", "director", "head of",
     ]),
     ("Lifecycle & Growth", [
         "retention", "renewal", "renewals", "onboarding", "churn", "health",
         "adoption", "qbr", "ebr", "nrr", "grr", "ttv", "voc", "lifecycle",
-        "upsell", "cross-sell", "expansion", "forecasting", "implementation",
-        "customer success", "account management", "client enablement"
+        "upsell", "cross-sell", "expansion", "forecasting",
     ]),
 ]
-DEFAULT_BUCKET = "Platforms & Tooling"
+DEFAULT_BUCKET = "Commercial"  # catch-all for domain/industry terms that don't fit above
 
 
-def extract_resume_text(docx_bytes: bytes) -> str:
-    """Extracts all text from docx or plain text fallback."""
-    if not docx_bytes:
-        return ""
-    try:
-        doc = Document(io.BytesIO(docx_bytes))
-        parts = [p.text for p in doc.paragraphs if p.text.strip()]
-        for t in doc.tables:
-            for row in t.rows:
-                for c in row.cells:
-                    if c.text.strip():
-                        parts.append(c.text.strip())
-        return "\n".join(parts)
-    except Exception:
-        try:
-            return docx_bytes.decode("utf-8", errors="ignore")
-        except Exception:
-            return ""
+def extract_resume_text(docx_bytes):
+    doc = Document(io.BytesIO(docx_bytes))
+    parts = []
+    for p in doc.paragraphs:
+        if p.text.strip():
+            parts.append(p.text)
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                if cell.text.strip():
+                    parts.append(cell.text)
+    return "\n".join(parts)
 
 
-def _classify(keyword: str) -> str:
+def _find_paragraph_index(doc, text_contains):
+    for i, p in enumerate(doc.paragraphs):
+        if text_contains.lower() in p.text.lower():
+            return i
+    return None
+
+
+def _classify(keyword):
     kw_lower = keyword.lower()
     for bucket_name, hints in BUCKET_RULES:
-        if any(h in kw_lower for h in hints):
+        if any(hint in kw_lower for hint in hints):
             return bucket_name
     return DEFAULT_BUCKET
 
 
-def _has_keyword(text: str, keyword: str) -> bool:
-    return re.search(r"\b" + re.escape(keyword) + r"\b", text, re.IGNORECASE) is not None
+def _bullet_already_has(paragraph_text, keyword):
+    return re.search(r"\b" + re.escape(keyword) + r"\b", paragraph_text, re.IGNORECASE) is not None
 
 
-def create_docx_from_raw_text(text: str, missing_keywords: list[str]) -> bytes:
-    """Generates a clean DOCX document from raw text with injected ATS keywords."""
-    doc = Document()
-    
-    # Page Margins
-    for section in doc.sections:
-        section.top_margin = Inches(0.8)
-        section.bottom_margin = Inches(0.8)
-        section.left_margin = Inches(0.8)
-        section.right_margin = Inches(0.8)
+def tailor_resume(base_docx_bytes, missing_keywords):
+    """
+    Distributes missing_keywords across the existing Core Competencies
+    bullets by topic (tools with tools, leadership with leadership, etc.),
+    appending each to the end of its matching bullet's own text run so
+    formatting matches exactly. Anything that doesn't fit a specific bucket
+    goes to the general "Commercial" bullet. No new standalone line is added.
 
-    lines = [l.strip() for l in text.split("\n") if l.strip()]
-    
-    # Candidate Header
-    if lines:
-        title_para = doc.add_paragraph()
-        run = title_para.add_run(lines[0])
-        run.bold = True
-        run.font.size = Pt(16)
-        run.font.color.rgb = RGBColor(17, 24, 39)
+    Takes and returns raw .docx bytes - no filesystem involved, so this
+    works cleanly with DB-blob storage on ephemeral hosting.
+    """
+    doc = Document(io.BytesIO(base_docx_bytes))
 
-    # Injected Core Competencies section
-    if missing_keywords:
-        sec_h = doc.add_paragraph()
-        h_run = sec_h.add_run("TARGET ATS COMPETENCIES & PROFICIENCIES")
-        h_run.bold = True
-        h_run.font.size = Pt(11)
-        h_run.font.color.rgb = RGBColor(79, 70, 229)
-
-        kw_para = doc.add_paragraph()
-        kw_para.add_run(" • " + " • ".join(missing_keywords[:12]))
-
-    # Add remaining original lines
-    for line in lines[1:]:
+    comp_idx = _find_paragraph_index(doc, "CORE COMPETENCIES")
+    if comp_idx is None:
+        # Fallback: resume doesn't have this exact section, just append
+        # everything as one line at the end rather than fail silently.
         p = doc.add_paragraph()
-        if any(h in line.upper() for h in ["EXPERIENCE", "EMPLOYMENT", "SKILLS", "EDUCATION", "SUMMARY"]):
-            r = p.add_run(line)
-            r.bold = True
-            r.font.size = Pt(11)
-            r.font.color.rgb = RGBColor(79, 70, 229)
-        else:
-            p.add_run(line)
-
-    out = io.BytesIO()
-    doc.save(out)
-    return out.getvalue()
-
-
-def tailor_resume(base_docx_bytes: bytes, missing_keywords: list[str], raw_text_fallback: str = "") -> bytes:
-    """
-    Distributes missing keywords throughout the DOCX. If base_docx_bytes is not
-    a valid DOCX document (e.g. was uploaded as PDF/text), constructs a fresh DOCX.
-    """
-    try:
-        doc = Document(io.BytesIO(base_docx_bytes))
-    except Exception:
-        # Fallback to creating a new formatted docx from text
-        return create_docx_from_raw_text(raw_text_fallback, missing_keywords)
-
-    if not missing_keywords:
+        run = p.add_run("Additional Relevant Keywords: " + ", ".join(sorted(missing_keywords)))
+        run.italic = True
         out = io.BytesIO()
         doc.save(out)
         return out.getvalue()
 
-    unplaced = list(missing_keywords)
-
-    # 1. Distribute in skills/competencies paragraphs
-    for p in doc.paragraphs:
-        p_text = p.text.strip().lower()
-        if any(h in p_text for h in ["core competencies", "skills", "tools", "expertise"]):
-            to_inject = unplaced[:6]
-            if to_inject:
-                addition = " • " + " • ".join(to_inject)
-                if p.runs:
-                    p.runs[-1].text += addition
-                else:
-                    p.add_run(addition)
-                unplaced = unplaced[6:]
+    # Map each competencies bullet paragraph by its leading label
+    # (e.g. "Platforms & Tooling: Gainsight, ChurnZero, ...")
+    bullet_paragraphs = {}
+    i = comp_idx + 1
+    while i < len(doc.paragraphs):
+        text = doc.paragraphs[i].text.strip()
+        if not text or ":" not in text:
+            break
+        label = text.split(":", 1)[0].strip()
+        bullet_paragraphs[label] = doc.paragraphs[i]
+        i += 1
+        if i - comp_idx > 8:  # safety stop
             break
 
-    # 2. Weave into experience paragraphs
-    if unplaced:
-        for p in doc.paragraphs:
-            if len(p.text.split()) > 10 and not p.text.startswith("http"):
-                batch = [k for k in unplaced[:2] if not _has_keyword(p.text, k)]
-                if batch:
-                    addition = f" (Key proficiencies: {', '.join(batch)})"
-                    if p.runs:
-                        p.runs[-1].text += addition
-                    else:
-                        p.add_run(addition)
-                    unplaced = unplaced[2:]
-            if not unplaced:
-                break
+    def find_bucket_paragraph(bucket_name):
+        for label, para in bullet_paragraphs.items():
+            if bucket_name.lower() in label.lower():
+                return para
+        return None
 
-    # 3. Trailing fallback section
-    if unplaced:
-        p = doc.add_paragraph()
-        r = p.add_run("Additional ATS Proficiencies: " + ", ".join(sorted(unplaced)))
-        r.italic = True
+    # Group keywords by target bullet paragraph
+    grouped = {}
+    for kw in sorted(missing_keywords):
+        bucket = _classify(kw)
+        target_para = find_bucket_paragraph(bucket) or find_bucket_paragraph(DEFAULT_BUCKET)
+        if target_para is None:
+            target_para = next(iter(bullet_paragraphs.values()), None)
+        if target_para is None:
+            continue
+        key = id(target_para)
+        if key not in grouped:
+            grouped[key] = {"para": target_para, "keywords": []}
+        if not _bullet_already_has(target_para.text, kw):
+            grouped[key]["keywords"].append(kw)
+
+    for entry in grouped.values():
+        para = entry["para"]
+        new_terms = entry["keywords"]
+        if not new_terms:
+            continue
+        addition = ", " + ", ".join(new_terms)
+        if para.runs:
+            para.runs[-1].text += addition
+        else:
+            para.add_run(addition)
 
     out = io.BytesIO()
     doc.save(out)
