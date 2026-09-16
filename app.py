@@ -167,6 +167,7 @@ def api_status():
         "resume_exists": bool(profile["resume_blob"]) if profile else False,
         "gmail_configured": bool(profile["gmail_email"] and profile["gmail_app_password_encrypted"]) if profile else False,
         "send_emails_enabled": bool(profile["send_emails_enabled"]) if profile else False,
+        "ats_min_score": profile["ats_min_score"] if profile else 90,
         "is_admin": bool(session.get("is_admin")),
         "job_pool_size": job_pool.pool_size(),
     })

@@ -8,56 +8,54 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --primary: #1E40AF; --primary-hover: #1B3691; --sky: #3B82F6; --amber: #D97706;
-    --bg: #F3F4F6; --panel: #FFFFFF; --line: #E5E7EB; --text: #1F2937; --muted: #6B7280;
+    --primary: #1E40AF; --primary-hover: #1B3691; --primary-light: #EEF2FF; --primary-mid: #C7D2FE;
+    --bg: #F8FAFC; --panel: #FFFFFF; --line: #E5E7EB; --text: #1F2937; --muted: #6B7280;
     --error: #DC2626; --error-bg: #FEF2F2;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; color: var(--text); }
-  .wrap { display: flex; min-height: 100vh; }
-
-  /* Left: purpose + process */
-  .intro {
-    flex: 1 1 46%; background: var(--primary); color: white; padding: 56px 52px;
-    display: flex; flex-direction: column; justify-content: center; max-width: 560px;
+  body {
+    margin: 0; font-family: 'Inter', -apple-system, sans-serif; color: var(--text); background: var(--bg);
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px 20px;
   }
-  .brand { display: flex; align-items: center; gap: 13px; margin-bottom: 32px; }
+  .page { width: 100%; max-width: 460px; }
+
+  .brand { display: flex; align-items: center; gap: 12px; justify-content: center; margin-bottom: 8px; }
   .logo-badge {
-    width: 44px; height: 44px; border-radius: 10px; background: white; flex-shrink: 0;
+    width: 40px; height: 40px; border-radius: 10px; background: var(--primary); flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
   }
-  .wordmark { font-family: 'Source Serif 4', serif; font-size: 24px; font-weight: 700; color: white; line-height: 1; }
-  .tagline { font-size: 13px; color: #C7D6FA; margin-top: 4px; }
+  .wordmark { font-family: 'Source Serif 4', serif; font-size: 21px; font-weight: 700; color: var(--text); line-height: 1.1; }
+  .tagline { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .brand-text { text-align: left; }
 
-  .intro h1 { font-family: 'Source Serif 4', serif; font-size: 26px; font-weight: 700; line-height: 1.3; margin: 0 0 14px; }
-  .intro .pitch { font-size: 14.5px; color: #DCE5FB; line-height: 1.65; margin: 0 0 36px; }
-
-  .steps { list-style: none; padding: 0; margin: 0; }
-  .steps li { display: flex; gap: 14px; margin-bottom: 20px; }
-  .step-num {
-    width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,0.15);
-    color: white; font-size: 12.5px; font-weight: 700; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center; margin-top: 1px;
+  /* Compact horizontal workflow strip - swift, single-color, integrated into the page */
+  .flow-strip {
+    display: flex; justify-content: space-between; gap: 4px; margin: 28px 0 24px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 14px;
   }
-  .step-text .step-title { font-size: 14px; font-weight: 700; color: white; margin-bottom: 2px; }
-  .step-text .step-desc { font-size: 13px; color: #C7D6FA; line-height: 1.5; }
-
-  .impact {
-    margin-top: 36px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.18);
-    font-size: 13px; color: #C7D6FA; line-height: 1.6; font-style: italic;
+  .flow-step { flex: 1; text-align: center; position: relative; }
+  .flow-step:not(:last-child)::after {
+    content: ''; position: absolute; top: 15px; left: 58%; width: 84%; height: 1.5px; background: var(--primary-mid);
   }
+  .flow-icon {
+    width: 30px; height: 30px; border-radius: 50%; background: var(--primary-light); color: var(--primary);
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; font-size: 13px; font-weight: 700;
+    position: relative; z-index: 1; border: 1.5px solid var(--primary-mid);
+  }
+  .flow-label { font-size: 10.5px; font-weight: 700; color: var(--text); line-height: 1.3; }
+  .flow-sub { font-size: 9.5px; color: var(--muted); margin-top: 1px; line-height: 1.3; }
+  .flow-highlight .flow-icon { background: var(--primary); color: white; border-color: var(--primary); }
+  .flow-highlight .flow-label { color: var(--primary); }
 
-  /* Right: form */
-  .form-side { flex: 1 1 54%; display: flex; align-items: center; justify-content: center; background: var(--bg); padding: 40px 24px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; width: 380px; padding: 40px 36px; }
-  .card h2 { font-size: 19px; font-weight: 700; margin: 0 0 24px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 32px 32px 30px; }
+  .card h2 { font-size: 17px; font-weight: 700; margin: 0 0 20px; text-align: center; }
   label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
   input {
     width: 100%; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 8px;
     font-size: 14px; font-family: inherit; margin-bottom: 16px; color: var(--text); background: white;
     transition: border-color 0.15s, box-shadow 0.15s;
   }
-  input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(30,64,175,0.12); }
+  input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
   input.field-error { border-color: var(--error); background: var(--error-bg); }
   input.field-error:focus { box-shadow: 0 0 0 3px rgba(220,38,38,0.12); }
   button {
@@ -74,88 +72,61 @@
   .footer-link a { color: var(--primary); font-weight: 700; text-decoration: none; }
   .footer-link a:hover { text-decoration: underline; }
 
-  @media (max-width: 880px) {
-    .wrap { flex-direction: column; }
-    .intro { max-width: none; padding: 40px 28px; }
-    .form-side { padding: 40px 20px 56px; }
+  @media (max-width: 480px) {
+    .flow-step:not(:last-child)::after { display: none; }
+    .flow-label, .flow-sub { display: none; }
   }
 </style>
 </head>
 <body>
-<div class="wrap">
-
-  <div class="intro">
-    <div class="brand">
-      <div class="logo-badge">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M8 5h8l4 4v10a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" fill="#1E40AF"/>
-          <path d="M16 5l4 4h-4z" fill="#93B4F0"/>
-          <path d="M10 13l2.5 2.5 4.5-4.5" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div>
-        <div class="wordmark">jobbot</div>
-        <div class="tagline">Smarter resumes. Faster applications. Zero hassle.</div>
-      </div>
+<div class="page">
+  <div class="brand">
+    <div class="logo-badge">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M8 5h8l4 4v10a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" fill="white"/>
+        <path d="M16 5l4 4h-4z" fill="var(--primary-mid)"/>
+        <path d="M10 13l2.5 2.5 4.5-4.5" stroke="#1E40AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
     </div>
-
-    <h1>Job hunting shouldn't be a second job.</h1>
-    <p class="pitch">
-      jobbot reads your resume once, then does the repetitive work that eats up a real job search:
-      finding roles that actually fit, fixing the resume gaps that get you filtered out by ATS
-      software, and keeping every application organized in one place.
-    </p>
-
-    <ul class="steps">
-      <li>
-        <div class="step-num">1</div>
-        <div class="step-text">
-          <div class="step-title">Upload your resume</div>
-          <div class="step-desc">We read it once and build your search profile — no repeated data entry.</div>
-        </div>
-      </li>
-      <li>
-        <div class="step-num">2</div>
-        <div class="step-text">
-          <div class="step-title">We search and score real postings</div>
-          <div class="step-desc">Matched against your actual experience, not just keyword overlap.</div>
-        </div>
-      </li>
-      <li>
-        <div class="step-num">3</div>
-        <div class="step-text">
-          <div class="step-title">Resumes get tailored automatically</div>
-          <div class="step-desc">If a posting's ATS filter would likely reject you, we fix that before you apply.</div>
-        </div>
-      </li>
-      <li>
-        <div class="step-num">4</div>
-        <div class="step-text">
-          <div class="step-title">You approve, we apply, you track</div>
-          <div class="step-desc">Nothing goes out without your sign-off. Every application lands in one dashboard.</div>
-        </div>
-      </li>
-    </ul>
-
-    <div class="impact">
-      The hours people lose to manually tailoring resumes and tracking spreadsheets are hours they
-      don't get back. jobbot exists to give those back to you.
+    <div class="brand-text">
+      <div class="wordmark">jobbot</div>
+      <div class="tagline">Smarter resumes. Faster applications. Zero hassle.</div>
     </div>
   </div>
 
-  <div class="form-side">
-    <div class="card">
-      <h2>Log in to your account</h2>
-      <div class="error" id="err"></div>
-      <label for="email">Email</label>
-      <input type="email" id="email" autocomplete="email">
-      <label for="password">Password</label>
-      <input type="password" id="password" autocomplete="current-password">
-      <button id="loginBtn">Log in</button>
-      <div class="footer-link">No account yet? <a href="/signup">Sign up</a></div>
+  <div class="flow-strip">
+    <div class="flow-step">
+      <div class="flow-icon">1</div>
+      <div class="flow-label">Upload resume</div>
+      <div class="flow-sub">Read once</div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-icon">2</div>
+      <div class="flow-label">Match jobs</div>
+      <div class="flow-sub">Scored, not guessed</div>
+    </div>
+    <div class="flow-step flow-highlight">
+      <div class="flow-icon">3</div>
+      <div class="flow-label">Hit 90% ATS</div>
+      <div class="flow-sub">Auto-tailored</div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-icon">4</div>
+      <div class="flow-label">Apply &amp; track</div>
+      <div class="flow-sub">You approve first</div>
     </div>
   </div>
 
+  <div class="card">
+    <h2>Log in to your account</h2>
+    <div class="error" id="err"></div>
+    <label for="email">Email</label>
+    <input type="email" id="email" autocomplete="email">
+    <label for="password">Password</label>
+    <input type="password" id="password" autocomplete="current-password">
+    <button id="loginBtn">Log in</button>
+    <div class="footer-link">No account yet? <a href="/signup">Sign up</a></div>
+  </div>
 </div>
 <script>
 function clearFieldErrors() {

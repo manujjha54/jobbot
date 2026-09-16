@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --primary: #1E40AF; --primary-hover: #1B3691; --amber: #D97706; --amber-bg: #FFFBEB;
+    --primary: #1E40AF; --primary-hover: #1B3691; --primary-dark: #142B6B;
     --bg: #F3F4F6; --panel: #FFFFFF; --line: #E5E7EB; --text: #1F2937; --muted: #6B7280;
     --approve: #059669; --approve-bg: #ECFDF5; --reject: #DC2626; --reject-bg: #FEF2F2;
   }
@@ -25,7 +25,7 @@
   .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
   .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
   .stat .num { font-family: 'Source Serif 4', serif; font-size: 24px; font-weight: 700; }
-  .stat.accent .num { color: var(--amber); }
+  .stat.accent .num { color: var(--reject); }
   .stat .label { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 22px; margin-bottom: 16px; }
   .panel h2 { font-size: 16px; margin: 0 0 12px; }
