@@ -8,39 +8,41 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --primary: #1E40AF; --primary-hover: #1B3691; --primary-dark: #142B6B;
-    --primary-light: #EEF2FF; --primary-mid-bg: #C7D2FE;
-    --bg: #F3F4F6; --panel: #FFFFFF; --line: #E5E7EB; --text: #1F2937; --muted: #6B7280;
+    --sky-1: #38BDF8; --sky-2: #0EA5E9; --sky-deep: #0369A1;
+    --red: #EF4444; --red-soft: #F87171; --yellow: #FBBF24; --yellow-bright: #FDE047;
+    --brand-light: #EFF8FF; --brand-mid-bg: #BAE6FD;
+    --bg: #F9FAFB; --panel: #FFFFFF; --line: #E5E7EB; --text: #1F2937; --muted: #6B7280;
     --approve: #059669; --approve-bg: #ECFDF5; --approve-line: #A7F3D0;
     --reject: #DC2626; --reject-bg: #FEF2F2; --reject-line: #FECACA;
     --skip-bg: #F3F4F6;
   }
   * { box-sizing: border-box; }
   body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
-  a { color: var(--primary); }
+  a { color: var(--sky-deep); }
   h1, h2 { font-family: 'Source Serif 4', serif; font-weight: 700; }
 
-  header { background: var(--primary); color: white; padding: 22px 32px 0; }
+  header { background: linear-gradient(135deg, var(--sky-1) 0%, var(--sky-2) 100%); color: white; padding: 22px 32px 0; }
   header .titlebar { display: flex; align-items: flex-start; justify-content: space-between; max-width: 1040px; margin: 0 auto; flex-wrap: wrap; gap: 10px; }
   .brand { display: flex; align-items: center; gap: 12px; }
   .logo-badge {
-    width: 38px; height: 38px; border-radius: 9px; background: white; flex-shrink: 0;
+    width: 38px; height: 38px; border-radius: 9px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--red), var(--yellow));
     display: flex; align-items: center; justify-content: center;
   }
   .wordmark { font-family: 'Source Serif 4', serif; font-size: 20px; font-weight: 700; color: white; line-height: 1.1; }
-  header .tagline { font-family: 'Inter', sans-serif; font-size: 12px; color: #C7D6FA; margin-top: 3px; }
-  header .userbar { font-size: 13px; color: #C7D6FA; padding-top: 4px; }
+  header .tagline { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; color: var(--yellow-bright); margin-top: 3px; }
+  header .userbar { font-size: 13px; color: #E0F2FE; padding-top: 4px; }
   header .userbar a { color: white; text-decoration: none; font-weight: 700; margin-left: 14px; }
   header .userbar a:hover { text-decoration: underline; }
 
   /* Underline tabs - flat, no glass/pill effects */
   nav.tabs { max-width: 1040px; margin: 22px auto 0; display: flex; gap: 6px; }
   nav.tabs button {
-    background: none; border: none; color: #B9CAF2; padding: 11px 6px; margin-right: 22px;
+    background: none; border: none; color: rgba(255,255,255,0.75); padding: 11px 6px; margin-right: 22px;
     font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif;
     border-bottom: 2.5px solid transparent;
   }
-  nav.tabs button.active { color: white; border-bottom-color: white; }
+  nav.tabs button.active { color: white; border-bottom-color: var(--yellow-bright); }
   nav.tabs button:hover:not(.active) { color: white; }
 
   main { max-width: 1040px; margin: 0 auto; padding: 32px 32px 80px; }
@@ -60,12 +62,12 @@
   .summary-line { font-size: 13px; color: var(--muted); }
 
   button.primary {
-    background: var(--primary); color: white; border: none; padding: 11px 20px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--red), var(--yellow)); color: white; border: none; padding: 11px 20px; border-radius: 8px;
     font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif;
-    transition: background 0.15s;
+    transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 4px 12px rgba(239,68,68,0.2);
   }
-  button.primary:hover { background: var(--primary-hover); }
-  button.primary:disabled { background: #B4BAC7; cursor: default; }
+  button.primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(239,68,68,0.28); }
+  button.primary:disabled { background: #B4BAC7; cursor: default; transform: none; box-shadow: none; }
   button.small { padding: 7px 14px; font-size: 12.5px; }
 
   /* Job cards - color reserved for the score number only, not the whole card */
@@ -77,8 +79,11 @@
     border-right: 1px solid var(--line);
   }
   .score-col .pct-num { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; }
-  .score-col .pct-num.high { color: var(--primary-dark); }
-  .score-col .pct-num.mid { color: var(--primary); }
+  .score-col .pct-num.high {
+    background: linear-gradient(135deg, var(--red), var(--yellow));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .score-col .pct-num.mid { color: #D97706; }
   .score-col .pct-num.low { color: var(--muted); }
   .score-col .pct-label { font-size: 9.5px; font-weight: 700; color: var(--muted); letter-spacing: 0.03em; margin-top: 1px; }
   .job-content { flex: 1; padding: 15px 18px; min-width: 0; }
@@ -103,13 +108,13 @@
 
   .sticky-apply {
     position: sticky; bottom: 16px; margin-top: 16px; border-radius: 10px;
-    background: var(--primary); color: white; padding: 14px 20px;
+    background: linear-gradient(135deg, var(--sky-1) 0%, var(--sky-2) 100%); color: white; padding: 14px 20px;
     display: flex; justify-content: space-between; align-items: center;
-    box-shadow: 0 8px 24px rgba(30,64,175,0.25);
+    box-shadow: 0 8px 24px rgba(14,165,233,0.3);
   }
-  .sticky-apply span { font-size: 13px; color: #C7D6FA; }
-  .sticky-apply button.primary { background: white; color: var(--primary); }
-  .sticky-apply button.primary:hover { background: var(--primary-light); }
+  .sticky-apply span { font-size: 13px; color: #E0F2FE; }
+  .sticky-apply button.primary { background: linear-gradient(135deg, var(--red), var(--yellow)); box-shadow: none; }
+  .sticky-apply button.primary:hover { transform: translateY(-1px); }
 
   .empty { text-align: center; padding: 52px 20px; color: var(--muted); font-size: 14px; border: 1px dashed var(--line); border-radius: 10px; background: var(--panel); }
 
@@ -117,7 +122,7 @@
   .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
   .stat .num { font-family: 'Source Serif 4', serif; font-size: 24px; font-weight: 700; color: var(--text); }
   .stat .label { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
-  .stat.accent .num { color: var(--primary); }
+  .stat.accent .num { color: var(--sky-deep); }
 
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
@@ -126,7 +131,7 @@
   .badge { padding: 2px 9px; border-radius: 100px; font-size: 11px; font-weight: 700; }
   .badge.sent { background: var(--approve-bg); color: var(--approve); }
   .badge.draft { background: #F3F4F6; color: #4B5563; }
-  .badge.manual { background: #EEF2FF; color: var(--primary); }
+  .badge.manual { background: var(--brand-light); color: var(--sky-deep); }
   .badge.failed { background: var(--reject-bg); color: var(--reject); }
 
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; margin-bottom: 14px; }
@@ -138,15 +143,15 @@
     border: 1.5px solid var(--line); border-radius: 7px; color: var(--text); background: white;
     transition: border-color 0.15s, box-shadow 0.15s;
   }
-  input:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(30,64,175,0.10); }
+  input:focus, textarea:focus { outline: none; border-color: var(--sky-2); box-shadow: 0 0 0 3px rgba(14,165,233,0.12); }
   textarea { resize: vertical; }
   input[type="file"] { font-size: 13px; }
   .subpanel { background: #F8F9FC; }
   .ats-callout {
-    background: var(--primary-light); border: 1px solid var(--primary-mid-bg); border-radius: 10px;
-    padding: 14px 16px; font-size: 13px; color: #1E3A8A; line-height: 1.6; margin-bottom: 18px;
+    background: var(--brand-light); border: 1px solid var(--brand-mid-bg); border-radius: 10px;
+    padding: 14px 16px; font-size: 13px; color: #075985; line-height: 1.6; margin-bottom: 18px;
   }
-  .ats-callout strong { color: var(--primary-dark); }
+  .ats-callout strong { color: var(--sky-deep); }
 
   .resume-card { border: 1px solid var(--line); border-radius: 10px; padding: 17px 19px; background: var(--panel); }
   .resume-card + .resume-card { margin-top: 12px; }
@@ -155,7 +160,7 @@
   .score-arrow .before { color: var(--reject); }
   .score-arrow .after { color: var(--approve); }
   .keyword-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
-  .chip { background: #EEF2FF; color: var(--primary); font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 100px; }
+  .chip { background: var(--brand-light); color: var(--sky-deep); font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 100px; }
   .resume-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
 
   .toast {
@@ -180,9 +185,9 @@
     <div class="brand">
       <div class="logo-badge">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path d="M8 5h8l4 4v10a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" fill="#1E40AF"/>
-          <path d="M16 5l4 4h-4z" fill="#93B4F0"/>
-          <path d="M10 13l2.5 2.5 4.5-4.5" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M8 5h8l4 4v10a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" fill="#FFFFFF"/>
+          <path d="M16 5l4 4h-4z" fill="#FEF3C7"/>
+          <path d="M10 13l2.5 2.5 4.5-4.5" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
       <div>
