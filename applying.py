@@ -40,6 +40,95 @@ def _generate_cover_letter(job, profile_dict, profile_row, candidate_name):
     )
 
 
+def get_keyword_options(user_id, decision_id):
+    """
+    Computes the CURRENT missing-keyword set for one applied job, scored
+    against the user's base resume (not any previously auto-generated
+    tailored version) - so the person always sees a fresh, accurate picture
+    to choose from, not a stale computation.
+    """
+    with db_session() as conn:
+        row = conn.execute(
+            """SELECT ujd.id, jp.title, jp.company, jp.description
+               FROM user_job_decisions ujd
+               JOIN job_postings jp ON jp.id = ujd.job_posting_id
+               WHERE ujd.id = ? AND ujd.user_id = ?""",
+            (decision_id, user_id),
+        ).fetchone()
+        profile_row = conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone()
+
+    if not row or not profile_row or not profile_row["resume_blob"]:
+        return None
+
+    profile_dict = _profile_row_to_dict(profile_row)
+    company_terms = [t for t in (row["company"] or "").replace(",", " ").split() if len(t) > 2]
+    base_text = extract_resume_text(profile_row["resume_blob"])
+    score, matched, missing = score_resume(base_text, row["description"] or "", profile_dict, exclude_terms=company_terms)
+
+    return {
+        "title": row["title"],
+        "company": row["company"],
+        "base_score": score,
+        "missing_keywords": sorted(missing),
+    }
+
+
+def generate_custom_resume(user_id, decision_id, selected_keywords):
+    """
+    Builds a resume using ONLY the keywords the person explicitly selected
+    (distributed naturally across the relevant Core Competencies bullets,
+    same logic as auto-tailoring), rescopes the ATS score against that
+    result, and overwrites this decision's stored resume/score so the
+    download link and dashboard reflect it immediately.
+    """
+    with db_session() as conn:
+        row = conn.execute(
+            """SELECT ujd.id, jp.id as job_id, jp.title, jp.company, jp.description
+               FROM user_job_decisions ujd
+               JOIN job_postings jp ON jp.id = ujd.job_posting_id
+               WHERE ujd.id = ? AND ujd.user_id = ?""",
+            (decision_id, user_id),
+        ).fetchone()
+        profile_row = conn.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone()
+
+    if not row or not profile_row or not profile_row["resume_blob"]:
+        return None
+
+    profile_dict = _profile_row_to_dict(profile_row)
+    company_terms = [t for t in (row["company"] or "").replace(",", " ").split() if len(t) > 2]
+    base_bytes = profile_row["resume_blob"]
+    base_text = extract_resume_text(base_bytes)
+    base_score, _, _ = score_resume(base_text, row["description"] or "", profile_dict, exclude_terms=company_terms)
+
+    if selected_keywords:
+        new_bytes = tailor_resume(base_bytes, selected_keywords)
+    else:
+        new_bytes = base_bytes  # nothing selected - leave resume as-is, just rescope score
+
+    new_text = extract_resume_text(new_bytes)
+    new_score, _, _ = score_resume(new_text, row["description"] or "", profile_dict, exclude_terms=company_terms)
+
+    safe_company = "".join(c if c.isalnum() else "_" for c in row["company"])[:40]
+    filename = f"{safe_company}_{row['job_id']}_custom.docx"
+
+    with db_session() as conn:
+        conn.execute(
+            """UPDATE user_job_decisions SET
+               tailored_resume_blob = ?, tailored_resume_filename = ?,
+               ats_score = ?, base_ats_score = ?, was_tailored = ?, added_keywords = ?
+               WHERE id = ?""",
+            (new_bytes, filename, new_score, base_score, 1 if selected_keywords else 0,
+             json.dumps(sorted(selected_keywords)), decision_id),
+        )
+
+    return {
+        "base_score": base_score,
+        "new_score": new_score,
+        "added_keywords": sorted(selected_keywords),
+        "decision_id": decision_id,
+    }
+
+
 def _resolve_resume(job, profile_dict, profile_row, ats_min_score):
     """Returns (resume_bytes_to_use, base_score, final_score, was_tailored, tailored_filename, added_keywords)."""
     base_bytes = profile_row["resume_blob"]

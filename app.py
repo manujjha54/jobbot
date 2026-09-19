@@ -244,6 +244,26 @@ def api_download_resume(decision_id):
     )
 
 
+@app.route("/api/keyword_options/<int:decision_id>")
+@login_required
+def api_keyword_options(decision_id):
+    result = applying.get_keyword_options(current_user_id(), decision_id)
+    if result is None:
+        return jsonify({"error": "Could not load keyword options for this application."}), 404
+    return jsonify(result)
+
+
+@app.route("/api/customize_resume/<int:decision_id>", methods=["POST"])
+@login_required
+def api_customize_resume(decision_id):
+    body = request.get_json(force=True)
+    selected_keywords = body.get("keywords", [])
+    result = applying.generate_custom_resume(current_user_id(), decision_id, selected_keywords)
+    if result is None:
+        return jsonify({"error": "Could not generate a resume for this application."}), 404
+    return jsonify(result)
+
+
 @app.route("/api/tailored_resumes")
 @login_required
 def api_tailored_resumes():

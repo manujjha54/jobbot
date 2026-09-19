@@ -169,6 +169,35 @@
     box-shadow: 0 6px 20px rgba(0,0,0,0.2); display: none; z-index: 100; font-weight: 500;
   }
 
+  .kw-modal-backdrop {
+    position: fixed; inset: 0; background: rgba(3,42,64,0.45); z-index: 200;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .kw-modal {
+    background: white; border-radius: 14px; max-width: 520px; width: 100%;
+    max-height: 84vh; display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(3,42,64,0.3);
+  }
+  .kw-modal-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 20px 22px 14px; border-bottom: 1px solid var(--line);
+  }
+  .kw-modal-title { font-size: 16px; font-weight: 700; margin: 0; color: var(--text); }
+  .kw-modal-sub { font-size: 12.5px; color: var(--muted); margin: 3px 0 0; }
+  .kw-modal-close { background: none; border: none; font-size: 22px; line-height: 1; color: var(--muted); cursor: pointer; padding: 0 4px; }
+  .kw-modal-body { padding: 18px 22px; overflow-y: auto; flex: 1; }
+  .kw-option {
+    display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line);
+  }
+  .kw-option:last-child { border-bottom: none; }
+  .kw-option input[type="checkbox"] { margin-top: 2px; width: 16px; height: 16px; accent-color: var(--sky-2); flex-shrink: 0; }
+  .kw-option label { font-size: 13.5px; color: var(--text); cursor: pointer; }
+  .kw-modal-footer {
+    display: flex; align-items: center; gap: 12px; padding: 14px 22px; border-top: 1px solid var(--line);
+  }
+  .kw-score-line { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+  .kw-score-line b { color: var(--sky-deep); }
+
   @media (max-width: 680px) {
     header, main { padding-left: 18px; padding-right: 18px; }
     .stats-row { grid-template-columns: repeat(2, 1fr); }
@@ -329,7 +358,7 @@
     <div class="stats-row" id="statsRow"></div>
     <div class="panel">
       <table id="appTable">
-        <thead><tr><th>Applied</th><th>Role</th><th>Company</th><th>Method</th><th>Status</th><th>ATS</th><th>Link</th><th>Resume</th></tr></thead>
+        <thead><tr><th>Applied</th><th>Role</th><th>Company</th><th>Method</th><th>Status</th><th>ATS</th><th>Link</th><th>Resume</th><th></th></tr></thead>
         <tbody id="appTableBody"></tbody>
       </table>
       <div class="empty" id="dashEmpty" style="display:none;">No applications yet — approve and apply to some jobs first.</div>
@@ -337,6 +366,26 @@
   </div>
 
 </main>
+
+<!-- Keyword selection modal -->
+<div id="kwModalBackdrop" class="kw-modal-backdrop" style="display:none;">
+  <div class="kw-modal">
+    <div class="kw-modal-header">
+      <div>
+        <p class="kw-modal-title" id="kwModalTitle">Customize keywords</p>
+        <p class="kw-modal-sub" id="kwModalSub"></p>
+      </div>
+      <button class="kw-modal-close" id="kwModalClose">&times;</button>
+    </div>
+    <div class="kw-modal-body" id="kwModalBody">
+      <p style="font-size:13px; color:var(--muted);">Loading…</p>
+    </div>
+    <div class="kw-modal-footer">
+      <span id="kwModalResult" style="font-size:12.5px; color:var(--muted); flex:1;"></span>
+      <button class="primary small" id="kwGenerateBtn">Generate resume</button>
+    </div>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -610,7 +659,10 @@ async function loadTailoredResumes() {
         <div class="keyword-chips">${chips || '<span style="color:var(--muted); font-size:12.5px;">No keywords recorded</span>'}</div>
         <div class="resume-bottom">
           <a class="job-link" href="${r.url}" target="_blank" rel="noopener">View posting</a>
-          <a href="/api/download_resume/${r.id}"><button class="primary small">Download tailored resume</button></a>
+          <div style="display:flex; gap:8px;">
+            <button class="primary small" style="background:white; color:var(--sky-deep); border:1px solid var(--brand-mid-bg); box-shadow:none;" onclick="openKeywordModal(${r.id}, '${escapeHtml(r.title).replace(/'/g,"\\'")}', '${escapeHtml(r.company).replace(/'/g,"\\'")}')">Customize</button>
+            <a href="/api/download_resume/${r.id}"><button class="primary small">Download tailored resume</button></a>
+          </div>
         </div>`;
       list.appendChild(div);
     });
@@ -654,7 +706,8 @@ async function loadDashboard() {
           <td><span class="badge ${badgeClass}">${badgeText}</span></td>
           <td>${r.ats_score ? r.ats_score + '%' : '—'}</td>
           <td>${r.url ? `<a href="${r.url}" target="_blank" rel="noopener">Open</a>` : '—'}</td>
-          <td>${resumeDownloadCell(r)}</td>`;
+          <td>${resumeDownloadCell(r)}</td>
+          <td><button class="primary small" onclick="openKeywordModal(${r.id}, '${escapeHtml(r.title).replace(/'/g,"\\'")}', '${escapeHtml(r.company).replace(/'/g,"\\'")}')">Customize</button></td>`;
         tbody.appendChild(tr);
       });
     }
@@ -667,6 +720,73 @@ if ($('#f_ats_min')) {
     updateAtsCalloutText(parseInt(e.target.value) || 90);
   });
 }
+
+// --- Keyword customization modal ---
+let currentModalDecisionId = null;
+
+async function openKeywordModal(decisionId, title, company) {
+  currentModalDecisionId = decisionId;
+  $('#kwModalTitle').textContent = 'Customize keywords';
+  $('#kwModalSub').textContent = `${title} — ${company}`;
+  $('#kwModalResult').textContent = '';
+  $('#kwModalBody').innerHTML = '<p style="font-size:13px; color:var(--muted);">Loading…</p>';
+  $('#kwModalBackdrop').style.display = 'flex';
+
+  try {
+    const res = await fetch(`/api/keyword_options/${decisionId}`);
+    const data = await res.json();
+    if (data.error) {
+      $('#kwModalBody').innerHTML = `<p style="font-size:13px; color:var(--reject);">${escapeHtml(data.error)}</p>`;
+      return;
+    }
+    if (!data.missing_keywords.length) {
+      $('#kwModalBody').innerHTML = `
+        <p class="kw-score-line">Base resume already scores <b>${data.base_score}%</b> against this job — no missing keywords found.</p>`;
+      return;
+    }
+    const options = data.missing_keywords.map((kw, i) => `
+      <div class="kw-option">
+        <input type="checkbox" id="kw_${i}" value="${escapeHtml(kw)}" checked>
+        <label for="kw_${i}">${escapeHtml(kw)}</label>
+      </div>`).join('');
+    $('#kwModalBody').innerHTML = `
+      <p class="kw-score-line">Base resume scores <b>${data.base_score}%</b> against this job. Choose which missing keywords to weave in — each gets placed in the most relevant existing bullet, not dumped in one line.</p>
+      ${options}`;
+  } catch (e) {
+    $('#kwModalBody').innerHTML = '<p style="font-size:13px; color:var(--reject);">Could not load keyword options.</p>';
+  }
+}
+
+$('#kwModalClose').addEventListener('click', () => { $('#kwModalBackdrop').style.display = 'none'; });
+$('#kwModalBackdrop').addEventListener('click', (e) => {
+  if (e.target.id === 'kwModalBackdrop') $('#kwModalBackdrop').style.display = 'none';
+});
+
+$('#kwGenerateBtn').addEventListener('click', async () => {
+  if (!currentModalDecisionId) return;
+  const checkboxes = document.querySelectorAll('#kwModalBody input[type="checkbox"]:checked');
+  const selected = Array.from(checkboxes).map(cb => cb.value);
+  const btn = $('#kwGenerateBtn');
+  btn.disabled = true; btn.textContent = 'Generating…';
+  try {
+    const res = await fetch(`/api/customize_resume/${currentModalDecisionId}`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ keywords: selected })
+    });
+    const data = await res.json();
+    if (data.error) {
+      $('#kwModalResult').innerHTML = `<span style="color:var(--reject);">${escapeHtml(data.error)}</span>`;
+    } else {
+      $('#kwModalResult').innerHTML = `<b style="color:var(--approve);">${data.base_score}% &rarr; ${data.new_score}%</b> &nbsp; <a href="/api/download_resume/${data.decision_id}" style="font-weight:700;">Download updated resume</a>`;
+      showToast('Resume regenerated with your selected keywords.');
+      loadDashboard();
+      loadTailoredResumes();
+    }
+  } catch (e) {
+    $('#kwModalResult').innerHTML = '<span style="color:var(--reject);">Could not generate resume.</span>';
+  }
+  btn.disabled = false; btn.textContent = 'Generate resume';
+});
 
 loadMe();
 loadStatus();
